@@ -1,6 +1,6 @@
 # Network_EndProject
 This is our final project in networking course.
-## Links
+## Links for devs (Delete Later)
 [google docs](https://docs.google.com/document/d/1WFzKAJH9fTqFsBf4oBU_-Y3lwhuzAA75eS2UvtlveAs/edit)
 
 ## Summary of the pdf
