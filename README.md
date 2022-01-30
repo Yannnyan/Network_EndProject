@@ -3,7 +3,12 @@ This is our final project in networking course.
 ## Links
 [google docs](https://docs.google.com/document/d/1WFzKAJH9fTqFsBf4oBU_-Y3lwhuzAA75eS2UvtlveAs/edit)
 
-
+##Summary of the pdf
+> Generally - we need to build a client server communication design to send and receive files
+1) gui = bonus
+2) design an implementation for RDT(FAST UDP) + congestion control
+3) 
+4) 
 
 ## Project pdf (Delete later)
 
