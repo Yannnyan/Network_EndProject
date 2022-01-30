@@ -1,13 +1,13 @@
 # Network_EndProject
 This is our final project in networking course.
-## Links for devs (Delete Later)
-[google docs](https://docs.google.com/document/d/1WFzKAJH9fTqFsBf4oBU_-Y3lwhuzAA75eS2UvtlveAs/edit)
 
 ## Summary of the pdf
 > Generally - we need to build a client server communication design in python to send and receive files.
 1) gui = bonus.
 2) design an implementation for (FAST UDP reliable) + congestion control (RDT).
 
+## Links for devs (Delete Later)
+[google docs](https://docs.google.com/document/d/1WFzKAJH9fTqFsBf4oBU_-Y3lwhuzAA75eS2UvtlveAs/edit)
 
 ## Project pdf (Delete later)
 
