@@ -5,7 +5,7 @@ This is our final project in networking course.
 
 
 
-## Project pdf
+## Project pdf (Delete later)
 
 ### Rules
 ![image](https://user-images.githubusercontent.com/82415308/151711634-42814d03-4c39-45af-bfb1-3b5b05eb9a5f.png)
