@@ -1,10 +1,13 @@
 import socket
 
-
+PORT = "5050"
+IP = "127.0.0.1"
+FORMAT = "utf - 8"
+BUFFERSIZE = 1024
 class Client_:
 
     def __init__(self):
-        pass
+        self.sock_ = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     def connect(self):
         pass
@@ -13,7 +16,13 @@ class Client_:
         pass
 
     def disconnect(self):
-        pass
+        self.sock_.close()
+    def sendMessage(self):
+        message = "client says hello"
+        self.sock_.sendto(IP,bytes(message).encode(FORMAT))
+        data, addr = self.sock_.recvfrom(BUFFERSIZE)
+        print(data)
+        self.disconnect()
 
     # sends message to everyone in the chat
     def set_msg_all(self):

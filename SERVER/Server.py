@@ -1,21 +1,26 @@
 import socket
 
 
-def main():
-    Server_().runServer()
-
-
-PORT = "5050"
+PORT = 5050
 IP = "127.0.0.1"
 FORMAT = "utf - 8"
+BUFFERSIZE = 1024
+
 
 class Server_():
 
     def __init__(self):
         # The SOCK_STREAM represents UDP connection
         self.socket_ = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.socket_.bind((IP, PORT))
 
     def runServer(self):
+        while True:
+            data, addr = self.socket_.recvfrom(BUFFERSIZE)
+            print(data)
+            message = bytes("server says helo").encode(FORMAT)
+            self.socket_.sendto(message, addr)
+
         # self.socket_.bind(('', 5050))
         # self.socket_.listen(1)
         # while True:
@@ -47,6 +52,10 @@ class Server_():
         # serverSocket.close()
         pass
 
+
+
+def main():
+    Server_().runServer()
 
 if __name__ == '__main__':
     main()
