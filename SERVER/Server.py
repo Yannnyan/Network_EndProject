@@ -18,8 +18,8 @@ class Server_():
         while True:
             data, addr = self.socket_.recvfrom(BUFFERSIZE)
             print(data)
-            message = bytes("server says helo").encode(FORMAT)
-            self.socket_.sendto(message, addr)
+            message = "server says helo"
+            self.socket_.sendto(message.encode(FORMAT), addr)
 
         # self.socket_.bind(('', 5050))
         # self.socket_.listen(1)
