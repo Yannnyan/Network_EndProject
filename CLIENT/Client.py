@@ -4,6 +4,8 @@ PORT = "5050"
 IP = "127.0.0.1"
 FORMAT = "utf - 8"
 BUFFERSIZE = 1024
+
+
 class Client_:
 
     def __init__(self):
@@ -17,9 +19,10 @@ class Client_:
 
     def disconnect(self):
         self.sock_.close()
+
     def sendMessage(self):
         message = "client says hello"
-        self.sock_.sendto(IP,bytes(message).encode(FORMAT))
+        self.sock_.sendto(bytes(message).encode(FORMAT), IP)
         data, addr = self.sock_.recvfrom(BUFFERSIZE)
         print(data)
         self.disconnect()
