@@ -1,2 +1,5 @@
 created a base UDP client server to send and receive messages. 
 Plan for next time: investigate how to create congestion control for UDP.
+
+update 21/2/22:
+worked on the gui, added few buttons that directly associate with the client functions and a text box to receive messages from the user.
