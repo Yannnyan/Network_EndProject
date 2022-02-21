@@ -40,9 +40,11 @@ class Client_:
     # proceed to download file ?
     def proceed(self):
         pass
+
+
 def main():
     Client_().sendMessage()
 
+
 if __name__ == '__main__':
     main()
-
