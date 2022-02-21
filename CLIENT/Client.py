@@ -1,6 +1,6 @@
 import socket
 
-PORT = "5050"
+PORT = 5050
 IP = "127.0.0.1"
 FORMAT = "utf - 8"
 BUFFERSIZE = 1024
@@ -40,3 +40,9 @@ class Client_:
     # proceed to download file ?
     def proceed(self):
         pass
+def main():
+    Client_().sendMessage()
+
+if __name__ == '__main__':
+    main()
+

@@ -1,0 +1,2 @@
+created a base UDP client server to send and receive messages. 
+Plan for next time: investigate how to create congestion control for UDP.
