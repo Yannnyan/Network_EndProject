@@ -22,7 +22,7 @@ class Client_:
 
     def sendMessage(self):
         message = "client says hello"
-        self.sock_.sendto(message.encode(FORMAT), IP)
+        self.sock_.sendto(message.encode(FORMAT), (IP,PORT))
         data, addr = self.sock_.recvfrom(BUFFERSIZE)
         print(data)
         self.disconnect()
