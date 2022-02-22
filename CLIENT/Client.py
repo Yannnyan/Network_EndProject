@@ -36,14 +36,15 @@ class Client_:
 
     # '{"dc" : ""}'
     def disconnect(self):
-        message = json.dumps({"dc": ""})
+        message = json.dumps({"dc": self.name})
         self.sock_.sendto(message.encode(FORMAT), (IP, PORT))
         self.client_Running = False
         self.sock_.close()
+        print("[CLIENT] Disconnected!")
 
     # '{"msg" : "message text"}'
-    def sendMessage(self, msg: str):
-        message = json.dumps({"mgs": msg})
+    def sendMessage(self, msg: str, reciever: str):
+        message = json.dumps({"mgs": [reciever, msg]})
         self.sock_.sendto(message.encode(FORMAT), (IP, PORT))
 
     # '{"msgall" : "message text"}'
