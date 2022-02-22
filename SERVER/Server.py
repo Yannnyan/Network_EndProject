@@ -22,8 +22,8 @@ class Server_():
 
     def executeCommand(self, command: bytes, addr: (str, int)):
         d: dict = json.loads(command.decode(FORMAT))
-        ex = d.keys()[0]
-        val = d.values()[0]
+        ex = list(d.keys())[0]
+        val = list(d.values())[0]
         if ex == "whoOnline":
             self.sendMessageToClient(self.onlineClients(), addr)
         if ex == "connect":
