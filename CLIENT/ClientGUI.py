@@ -7,7 +7,7 @@ import Client
 def createButton(x: int, y: int, width: int, height: int, color: (int, int, int)):
     pygame.draw.rect(screen, color, [x, y, width, height])
 
-
+client = None
 pygame.init()
 
 screen = pygame.display.set_mode([1000, 500])
@@ -68,7 +68,7 @@ while running:
             # connect
             if buttonsX[1] <= mouse[0] <= buttonsX[1] + marginX - 10 and buttonsY[0] <= mouse[1] <= buttonsY[0] \
                     + marginY - 10:
-                client.connect()
+                client.connect("Joseph")
                 print("[Client] connect")
             # disconnect
             if buttonsX[2] <= mouse[0] <= buttonsX[2] + marginX - 10 and buttonsY[0] <= mouse[1] <= buttonsY[0] \
