@@ -37,7 +37,7 @@ class Client_:
     # '{"dc" : ""}'
     def disconnect(self):
         message = json.dumps({"dc": ""})
-        self.sock_.sendto(message.encode(FORMAT))
+        self.sock_.sendto(message.encode(FORMAT), (IP, PORT))
         self.client_Running = False
         self.sock_.close()
 
