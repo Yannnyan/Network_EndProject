@@ -3,3 +3,8 @@ Plan for next time: investigate how to create congestion control for UDP.
 
 update 21/2/22:
 worked on the gui, added few buttons that directly associate with the client functions and a text box to receive messages from the user.
+
+update 22/2/22:
+made the client and server communication with object oriented.
+made the gui to be able to communicate with the client.
+completely removed the pygame file and moved to use tkinter library as gui.
