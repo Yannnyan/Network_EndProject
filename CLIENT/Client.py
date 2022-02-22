@@ -13,12 +13,13 @@ class Client_:
         self.sock_ = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.client_Running = True
         self.name = "No name entered"
-        self.listeningThread = threading.Thread(target=self.startClient(), args=(1,))
+        self.listeningThread = threading.Thread(target=self.startClient)
         self.listeningThread.start()
 
     # loop that keeps the client listening to the server
     def startClient(self):
         while self.client_Running:
+            print("[CLIENT]")
             data, addr = self.sock_.recvfrom(BUFFERSIZE)
             print("[CLIENT] " + data.decode(FORMAT))
 
