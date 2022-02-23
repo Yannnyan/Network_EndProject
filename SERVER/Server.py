@@ -14,6 +14,7 @@ class Server_():
         self.socket_ = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket_.bind((IP, PORT))
         self.clients = {}  # {name : (ip,port) }
+        self.files = []  # [filenames]
 
     def runServer(self):
         while True:
@@ -28,9 +29,26 @@ class Server_():
             self.sendMessageToClient(self.onlineClients(), addr)
         if ex == "connect":
             self.connectClient(addr, val)
+        if ex == "dc":
+            self.clients.pop(val)
+        if ex == "msg":
+            if val[0] in self.clients.keys():
+                message = json.dumps({"msg": val[1]})
+                self.sendMessageToClient(message, self.clients[val[0]])
+            else:
+                print("[SERVER] Client is not online!")
+        if ex == "msgall":
+            message = json.dumps({"msg": val})
+            for client in self.clients.keys():
+                self.sendMessageToClient(message, self.clients[client])
+        if ex == "files":
+            self.sendMessageToClient(self.listFiles(), addr)
 
     def onlineClients(self) -> str:
-        return json.dumps(self.clients)
+        return json.dumps({"whoOnline": self.clients})
+
+    def listFiles(self) -> str:
+        return json.dumps({"files": self.files})
 
     def sendMessageToClient(self, message: str, addr: (str, int)):
         self.socket_.sendto(message.encode(FORMAT), addr)
