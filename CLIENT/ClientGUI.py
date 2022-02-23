@@ -6,11 +6,13 @@ from functools import partial
 from CLIENT import Client
 
 window = tk.Tk()
+window.title("Main Menu")
 window.geometry("700x500")
 
 serveraddress: str = None
 client_name: str = None
 client: Client.Client_ = None
+onlineClients = None
 isOnline = False
 
 listeningThread = None
@@ -69,22 +71,28 @@ def pressOK(win, name, addressVar):
 
 def getName():
     top = tk.Toplevel(window)
-    top.geometry("200x250")
+    top.title("Info")
+    top.geometry("250x250")
     top.lift()
     top.attributes("-topmost", True)
     win_x = window.winfo_x() + 300
     win_y = window.winfo_y() + 100
     top.geometry(f'+{win_x}+{win_y}')
+
     label = tk.Label(top, width=15, text="Enter client's name")
     label.pack(side=tk.TOP)
+
     name = tk.StringVar()
     nameEntered = tk.Entry(top, width=15, textvariable=name)
     nameEntered.pack(side=tk.TOP)
+
     label1 = tk.Label(top, width=15, text=" Enter Server's address")
     label1.pack(side=tk.TOP)
+
     address = tk.StringVar()
     addressEntered = tk.Entry(top, width=15, textvariable=address)
     addressEntered.pack(side=tk.TOP)
+
     func = partial(pressOK, top, name, address)
     but = tk.Button(top, text="OK", command=func)
     but.pack(side=tk.TOP)
@@ -116,19 +124,40 @@ def _from_rgb(rgb):
 # func that creates a chat pop up to show the messages of the clients
 def showChat():
     chat = tk.Toplevel()
+    chat.title("Chat")
     chat.lift()
     chat.attributes("-topmost", True)
     chat.geometry("600x400")
-    chatLabel = tk.Label(chat, width=80, height=25)
-    chatLabel.configure(bg=_from_rgb((76, 230, 52)))
-    chatLabel.grid(row=0, column=0)
-    scrollbar = tk.Scrollbar(chat, orient=tk.VERTICAL)
-    scrollbar.grid(row=0, column=2, sticky=tk.NS)
+
+    top = tk.Frame(chat)
+    top.pack(side=tk.TOP)
+    bottom = tk.Frame(chat)
+    bottom.pack(side=tk.BOTTOM)
+
+    scrollbary = tk.Scrollbar(chat)
+    scrollbary.pack(in_=top, side=tk.RIGHT, fill=tk.Y)
+    scrollbarx = tk.Scrollbar(chat, orient=tk.HORIZONTAL)
+    scrollbarx.pack(in_=top, side=tk.BOTTOM, fill=tk.X)
+
+    chatText = tk.Text(chat, width=70, height=20, yscrollcommand=scrollbary.set, xscrollcommand=scrollbarx.set)
+    chatText.configure(bg=_from_rgb((76, 230, 52)))
+    chatText.pack(in_=top, side=tk.LEFT)
+    scrollbary.config(command=chatText.yview)
+    scrollbarx.config(command=chatText.xview)
 
     textBox = tk.Entry(chat, text="")
-    textBox.grid(row=1, column=0, padx=5)
-    comboBox = ttk.Combobox(chat, width=2)
-    comboBox.grid(row=1, column=1)
+    textBox.pack(in_=bottom, side=tk.RIGHT)
+
+    style = ttk.Style()
+    style.theme_use('clam')
+    style.configure("TCombobox", fieldbackground="orange", background="white")
+    comboBox = ttk.Combobox(chat, width=20)
+    comboBox.pack(in_=bottom, side=tk.LEFT)
+    comboBox['values'] = ('haim','anna')
+    comboBox.set("See online")
+    comboBox['state'] = 'readonly'
+
+    chat.mainloop()
 
 
 def chatClient():
