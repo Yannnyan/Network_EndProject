@@ -7,7 +7,7 @@ from CLIENT import Client
 
 window = tk.Tk()
 window.title("Main Menu")
-window.geometry("700x500")
+window.geometry("800x500")
 
 serveraddress: str = None
 client_name: str = None
@@ -31,9 +31,11 @@ def listenClient():
 def startClient():
     global client_name, serveraddress, client
     getName()
-    client = Client.Client_(client_name, serveraddress)
-    listeningThread = threading.Thread(target=listenClient)
-    listeningThread.start()
+    if client_name is not None and serveraddress is not None:
+        print("if")
+        client = Client.Client_(serveraddress, client_name)
+        listeningThread = threading.Thread(target=listenClient)
+        listeningThread.start()
 
 
 def checkValidAddress(address: str) -> bool:
@@ -58,13 +60,12 @@ def pressOK(win, name, addressVar):
         serveraddress = "127.0.0.1"
         client_name = name.get()
         print(client_name)
-        win.destroy()
-        return
-    if checkValidAddress(address) is True:
+        win.quit()
+    elif checkValidAddress(address) is True:
         serveraddress = address
         client_name = name.get()
         print(client_name)
-        win.destroy()
+        win.quit()
     else:
         print("Address is not valid. Try again.")
 
@@ -97,7 +98,7 @@ def getName():
     but = tk.Button(top, text="OK", command=func)
     but.pack(side=tk.TOP)
     top.mainloop()
-
+    top.destroy()
 
 def connectClient():
     global client, client_name, serveraddress, isOnline
@@ -105,7 +106,7 @@ def connectClient():
         print("Client name or server address not entered. Please enter the details to connect and try again.")
         getName()
     else:
-        client.connect(client_name)
+        getMessageFromClient(client.connect(client_name))
         isOnline = True
 
 
@@ -172,6 +173,7 @@ def chatClient():
 # Client sends a message to the gui with the command and the description to be executed and the gui reacts to display
 # that.
 def getMessageFromClient(message):
+    print("[CLIENT] got message from server.")
     # '{"command" : "description"}'
     d: dict = json.loads(message)
     ex = list(d.keys())[0]

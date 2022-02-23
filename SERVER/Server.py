@@ -1,7 +1,7 @@
 import json
 import socket
 
-PORT = 5050
+PORT = 49153
 IP = "127.0.0.1"
 FORMAT = "utf - 8"
 BUFFERSIZE = 1024
@@ -56,6 +56,10 @@ class Server_():
     def connectClient(self, addr: (str, int), name: str):
         if name not in self.clients.keys():
             self.clients[name] = addr
+            print("[SERVER] Client " + name + " has connected.")
+            print("[SERVER] " + str(self.clients[name][0]) + " , " + str(self.clients[name][1]))
+            message = json.dumps({"connect": name})
+            self.sendMessageToClient(message, self.clients[name])
         else:
             print("[SERVER] Client is already connected.")
 
