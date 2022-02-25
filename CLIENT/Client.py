@@ -28,7 +28,7 @@ class Client_:
         return r.decode(FORMAT)
 
     # '{"whoOnline" : ""}'
-    def get_users(self) -> []:
+    def get_users(self):
         message = json.dumps({"whoOnline": ""})
         self.sock_.sendto(message.encode(FORMAT), (self.IP, PORTSERVER))
 
@@ -68,7 +68,7 @@ class Client_:
     def listenClient(self) -> str:
         data, addr = self.sock_.recvfrom(BUFFERSIZE)
         serData = data.decode(FORMAT)
-        print("[CLIENT] " + "received data")
+        print("[CLIENT] " + " received data")
         return serData
 
 

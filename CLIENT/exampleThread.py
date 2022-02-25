@@ -1,15 +1,16 @@
 import threading
 import time
+import CLIENT.Client
 
 
-def threadfunc(a):
+def threadfunc():
     while True:
-        print("hello from thread " + str(a))
-        time.sleep(1)
+        client.listenClient()
+        print("got message")
 
 
-thread1 = threading.Thread(target=threadfunc, args=(1,))
-thread2 = threading.Thread(target=threadfunc, args=(2,))
+client = CLIENT.Client.Client_("127.0.0.0", 49153)
+thread1 = threading.Thread(target=threadfunc)
 thread1.start()
-thread2.start()
-#threadfunc(2)
+client.get_users()
+# threadfunc(2)

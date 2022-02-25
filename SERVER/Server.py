@@ -19,33 +19,38 @@ class Server_():
     def runServer(self):
         while True:
             data, addr = self.socket_.recvfrom(BUFFERSIZE)
+            print("[SERVER] Received message from client. " + data.decode(FORMAT))
             self.executeCommand(data, addr)
 
     def executeCommand(self, command: bytes, addr: (str, int)):
         d: dict = json.loads(command.decode(FORMAT))
         ex = list(d.keys())[0]
         val = list(d.values())[0]
+        print(addr)
         if ex == "whoOnline":
-            self.sendMessageToClient(self.onlineClients(), addr)
-        if ex == "connect":
+            message = self.onlineClients()
+            self.sendMessageToClient(message, addr)
+        elif ex == "connect":
             self.connectClient(addr, val)
-        if ex == "dc":
+        elif ex == "dc":
             self.clients.pop(val)
-        if ex == "msg":
+        elif ex == "msg":
             if val[0] in self.clients.keys():
                 message = json.dumps({"msg": val[1]})
-                self.sendMessageToClient(message, self.clients[val[0]])
+                self.sendMessageToClient(self.onlineClients(), addr)
             else:
                 print("[SERVER] Client is not online!")
-        if ex == "msgall":
+        elif ex == "msgall":
             message = json.dumps({"msg": val})
             for client in self.clients.keys():
                 self.sendMessageToClient(message, self.clients[client])
-        if ex == "files":
+        elif ex == "files":
             self.sendMessageToClient(self.listFiles(), addr)
 
-    def onlineClients(self) -> str:
-        return json.dumps({"whoOnline": self.clients})
+    # returns json format for the online clients connected to the server
+    def onlineClients(self):
+        dictin = {"whoOnline": list(self.clients.keys())}
+        return json.dumps(dictin)
 
     def listFiles(self) -> str:
         return json.dumps({"files": self.files})

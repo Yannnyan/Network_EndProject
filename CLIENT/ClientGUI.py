@@ -34,8 +34,6 @@ def startClient():
     if client_name is not None and serveraddress is not None:
         print("if")
         client = Client.Client_(serveraddress, client_name)
-        listeningThread = threading.Thread(target=listenClient)
-        listeningThread.start()
 
 
 def checkValidAddress(address: str) -> bool:
@@ -51,6 +49,10 @@ def checkValidAddress(address: str) -> bool:
             except ValueError:
                 return False
         return True
+
+
+def clientGetUsers():
+    client.get_users()
 
 
 def pressOK(win, name, addressVar):
@@ -100,21 +102,25 @@ def getName():
     top.mainloop()
     top.destroy()
 
+
 def connectClient():
     global client, client_name, serveraddress, isOnline
     if client_name is None or serveraddress is None:
         print("Client name or server address not entered. Please enter the details to connect and try again.")
         getName()
     else:
-        getMessageFromClient(client.connect(client_name))
-        isOnline = True
+        if isOnline is False:
+            getMessageFromClient(client.connect(client_name))
+            isOnline = True
+            listeningThread = threading.Thread(target=listenClient)
+            listeningThread.start()
 
 
 def disconnectClient():
     global isOnline
     if isOnline is True:
-        client.disconnect()
         isOnline = not isOnline
+        client.disconnect()
 
 
 def _from_rgb(rgb):
@@ -154,7 +160,8 @@ def showChat():
     style.configure("TCombobox", fieldbackground="orange", background="white")
     comboBox = ttk.Combobox(chat, width=20)
     comboBox.pack(in_=bottom, side=tk.LEFT)
-    comboBox['values'] = ('haim','anna')
+
+    comboBox['values'] = onlineClients
     comboBox.set("See online")
     comboBox['state'] = 'readonly'
 
@@ -170,17 +177,40 @@ def chatClient():
         print("Client is disconnected. Please connect client first.")
 
 
+def showOnlineList():
+    toplist = tk.Tk()
+    toplist.geometry("400x400")
+    toplist.lift()
+    toplist.attributes("-topmost", True)
+    listOnline = tk.Listbox(toplist, width=50)
+    listOnline.pack(side=tk.TOP, pady=10)
+    for i in range(len(onlineClients)):
+        listOnline.insert(i, onlineClients[i])
+    toplist.mainloop()
+
 # Client sends a message to the gui with the command and the description to be executed and the gui reacts to display
 # that.
-def getMessageFromClient(message):
-    print("[CLIENT] got message from server.")
+def getMessageFromClient(message: str):
+    print("[CLIENT] got message from server. " + message)
     # '{"command" : "description"}'
     d: dict = json.loads(message)
     ex = list(d.keys())[0]
     val = list(d.values())[0]
-    if ex == "whoOnline":
-        updateLog("Users Online:", ', '.join(val))
-    if ex == "connect":
+    print(d)
+    print(ex)
+    print(val)
+    if ex == 'whoOnline':
+        global onlineClients
+        onlineClients = val
+        mes = ''
+        for i in range(len(val)):
+            mes += val[i]
+            if i != len(val) - 1:
+                mes += ', '
+        showOnlineList()
+        #updateLog("Users Online:", mes)
+
+    if ex == 'connect':
         updateLog("User Connected", client_name + " has connected to the server.")
     if ex == "dc":
         updateLog("User Disconnected", client_name + " has disconnected from the server.")
@@ -195,8 +225,7 @@ def getMessageFromClient(message):
 # updates the label that shows all the recent changes
 def updateLog(title: str, message: str):
     global label_recentChanges
-    label_recentChanges.configure(underline=1)
-    text1 = label_recentChanges.cget("text")
+    text1 = label_recentChanges["text"]
     text1 += "\n" + "------- " + title + " -------" + "\n" + message
     label_recentChanges.configure(text=text1)
 
@@ -208,14 +237,14 @@ button_connect = tk.Button(window, text="Connect", command=connectClient)
 button_connect.grid(row=0, column=1, padx=10)
 button_disconnect = tk.Button(window, text="Disconnect", command=disconnectClient)
 button_disconnect.grid(row=0, column=2, padx=10)
-button_showOnline = tk.Button(window, text="Show Online")
+button_showOnline = tk.Button(window, text="Show Online", command=clientGetUsers)
 button_showOnline.grid(row=0, column=3, padx=10)
 button_showFiles = tk.Button(window, text="Show files")
 button_showFiles.grid(row=0, column=4, padx=10)
 button_chat = tk.Button(window, text="Chat", command=chatClient)
 button_chat.grid(row=0, column=5, padx=10)
 # labels
-label_recentChanges = tk.Label(window, width=30, height=20, text="Update log")
+label_recentChanges = tk.Label(window, width=30, height=20,anchor= tk.N, text="Update log")
 label_recentChanges.config(bg="gray")
 label_recentChanges.grid(row=1, column=0, padx=10, pady=5)
 
