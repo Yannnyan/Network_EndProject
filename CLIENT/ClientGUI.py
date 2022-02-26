@@ -1,5 +1,6 @@
 import json
 import threading
+from threading import Timer
 import tkinter as tk
 from tkinter import ttk
 from functools import partial
@@ -16,6 +17,9 @@ onlineClients = None
 isOnline = False
 
 listeningThread = None
+timer = None
+
+updateLogText = "Update Log"
 
 
 # This function is used when pressing the button a popup appears to receive user information about the name of the
@@ -30,9 +34,11 @@ def listenClient():
 # starts the thread to listen the listen to messages the client is receiving
 def startClient():
     global client_name, serveraddress, client
+    if isOnline is True:
+        print("Client is already connected. You cannot start another client.")
+        return
     getName()
     if client_name is not None and serveraddress is not None:
-        print("if")
         client = Client.Client_(serveraddress, client_name)
 
 
@@ -105,22 +111,26 @@ def getName():
 
 def connectClient():
     global client, client_name, serveraddress, isOnline
+    if isOnline is True:
+        return
     if client_name is None or serveraddress is None:
         print("Client name or server address not entered. Please enter the details to connect and try again.")
         getName()
     else:
         if isOnline is False:
-            getMessageFromClient(client.connect(client_name))
+            client.connect(client_name)
             isOnline = True
             listeningThread = threading.Thread(target=listenClient)
             listeningThread.start()
 
 
+
 def disconnectClient():
-    global isOnline
+    global isOnline, listeningThread
     if isOnline is True:
         isOnline = not isOnline
         client.disconnect()
+        # listeningThread
 
 
 def _from_rgb(rgb):
@@ -170,7 +180,6 @@ def showChat():
 
 def chatClient():
     global isOnline
-    isOnline = True
     if isOnline is not False:
         showChat()
     else:
@@ -187,6 +196,7 @@ def showOnlineList():
     for i in range(len(onlineClients)):
         listOnline.insert(i, onlineClients[i])
     toplist.mainloop()
+
 
 # Client sends a message to the gui with the command and the description to be executed and the gui reacts to display
 # that.
@@ -208,10 +218,10 @@ def getMessageFromClient(message: str):
             if i != len(val) - 1:
                 mes += ', '
         showOnlineList()
-        #updateLog("Users Online:", mes)
+        updateLog("Users Online:", mes)
 
     if ex == 'connect':
-        updateLog("User Connected", client_name + " has connected to the server.")
+        updateLog("User Connected", val + " has connected to the server.")
     if ex == "dc":
         updateLog("User Disconnected", client_name + " has disconnected from the server.")
     if ex == "msg":
@@ -224,10 +234,27 @@ def getMessageFromClient(message: str):
 
 # updates the label that shows all the recent changes
 def updateLog(title: str, message: str):
-    global label_recentChanges
-    text1 = label_recentChanges["text"]
-    text1 += "\n" + "------- " + title + " -------" + "\n" + message
-    label_recentChanges.configure(text=text1)
+    global updateLogText
+    updateLogText += "\n" + "------- " + title + " -------" + "\n" + message
+
+
+def updateComponents():
+    global window, isOnline
+    # print("second has passed")
+    label_recentChanges.configure(text=updateLogText)
+    # if isOnline is True:
+    window.after(1000, updateComponents)
+
+
+# function that closes all threads when exiting the client gui
+def close_window():
+    global window, timer, listeningThread, isOnline, client
+    isOnline = False
+    if client is None:
+        window.destroy()
+        return
+    client.disconnect()
+    window.destroy()
 
 
 # buttons
@@ -244,8 +271,11 @@ button_showFiles.grid(row=0, column=4, padx=10)
 button_chat = tk.Button(window, text="Chat", command=chatClient)
 button_chat.grid(row=0, column=5, padx=10)
 # labels
-label_recentChanges = tk.Label(window, width=30, height=20,anchor= tk.N, text="Update log")
+label_recentChanges = tk.Label(window, width=30, height=20, anchor=tk.N, text="Update log")
 label_recentChanges.config(bg="gray")
 label_recentChanges.grid(row=1, column=0, padx=10, pady=5)
+# timers, operations on window
+window.after(1000, updateComponents)
+window.wm_protocol("WM_DELETE_WINDOW", close_window)
 
 window.mainloop()

@@ -22,6 +22,7 @@ class Server_():
             print("[SERVER] Received message from client. " + data.decode(FORMAT))
             self.executeCommand(data, addr)
 
+    # '{"connect" : ""}'
     def executeCommand(self, command: bytes, addr: (str, int)):
         d: dict = json.loads(command.decode(FORMAT))
         ex = list(d.keys())[0]
@@ -64,7 +65,8 @@ class Server_():
             print("[SERVER] Client " + name + " has connected.")
             print("[SERVER] " + str(self.clients[name][0]) + " , " + str(self.clients[name][1]))
             message = json.dumps({"connect": name})
-            self.sendMessageToClient(message, self.clients[name])
+            for client in self.clients:
+                self.sendMessageToClient(message, self.clients[client])
         else:
             print("[SERVER] Client is already connected.")
 
