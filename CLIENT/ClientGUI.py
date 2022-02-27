@@ -118,7 +118,7 @@ def connectClient():
         getName()
     else:
         if isOnline is False:
-            client.connect(client_name)
+            client.connect()
             isOnline = True
             listeningThread = threading.Thread(target=listenClient)
             listeningThread.start()

@@ -1,5 +1,6 @@
 import json
 import socket
+import threading
 
 PORT = 49153
 IP = "127.0.0.1"
@@ -11,23 +12,39 @@ class Server_():
 
     def __init__(self):
         # The SOCK_STREAM represents UDP connection
-        self.socket_ = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.socket_ = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket_.bind((IP, PORT))
+        self.socket_.listen(15)
         self.clients = {}  # {name : (ip,port) }
         self.files = []  # [filenames]
+        self.connectionDict = {}
+        # self.threadPool = []
+        # self.listeningThread = threading.Thread(target=self.acceptConnections)
+        # self.listeningThread.start()
+        self.acceptConnections()
 
-    def runServer(self):
-        while True:
-            data, addr = self.socket_.recvfrom(BUFFERSIZE)
+    def acceptConnections(self):
+        while len(self.connectionDict.keys()) <= 15:
+            print("listening to connections")
+            connection, addr = self.socket_.accept()
+            thread = threading.Thread(target=self.listenThread, args=[addr])
+            self.connectionDict[addr] = (connection, thread, True)  # True represents that the thread is alive
+            print(self.connectionDict[addr])
+            # self.threadPool.append(thread)
+            thread.start()
+
+
+    def listenThread(self, addressClient):
+        while (self.connectionDict[addressClient])[2]:
+            data, addr = (self.connectionDict[addressClient])[0].recvfrom(BUFFERSIZE)
             print("[SERVER] Received message from client. " + data.decode(FORMAT))
-            self.executeCommand(data, addr)
+            self.executeCommand(data, addressClient)
 
-    # '{"connect" : ""}'
+    # '{"connect" : "name"}'
     def executeCommand(self, command: bytes, addr: (str, int)):
         d: dict = json.loads(command.decode(FORMAT))
         ex = list(d.keys())[0]
         val = list(d.values())[0]
-        print(addr)
         if ex == "whoOnline":
             message = self.onlineClients()
             self.sendMessageToClient(message, addr)
@@ -57,7 +74,7 @@ class Server_():
         return json.dumps({"files": self.files})
 
     def sendMessageToClient(self, message: str, addr: (str, int)):
-        self.socket_.sendto(message.encode(FORMAT), addr)
+        self.connectionDict[addr][0].sendall(message.encode(FORMAT))
 
     def connectClient(self, addr: (str, int), name: str):
         if name not in self.clients.keys():
@@ -72,7 +89,7 @@ class Server_():
 
 
 def main():
-    Server_().runServer()
+    Server_()
 
 
 if __name__ == '__main__':
