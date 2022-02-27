@@ -1,19 +1,26 @@
 import unittest
 import json
 
+FILE = "../CLIENT//ports.json"
 from CLIENT import portsManager
 
-def testGetPort(self, manager):
-    pass
 
-def testResetFile(self):
+def testGetPort():
+    xport = portsManager.getPort()
+    print(xport)
+    portsManager.disconnectPort(xport)
+    readPorts()
+
+
+def readPorts():
+    with open(FILE) as file:
+        d: dict = json.load(file)
+        print(d)
+
+def testResetFile():
     portsManager.resetFile()
 
 
 if __name__ == "__main__":
     portsManager.resetFile()
-    with open("CLIENT.ports.json") as file:
-        d: dict = json.load(file)
-        print(d)
-    # TestPorts().testGetPort()
-
+    testGetPort()

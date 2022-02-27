@@ -44,8 +44,8 @@ class Client_:
         print("[CLIENT] Disconnected!")
 
     # '{"msg" : "message text"}'
-    def sendMessage(self, msg: str, reciever: str):
-        message = json.dumps({"mgs": [reciever, msg]})
+    def sendMessage(self, msg: str, receiver: str):
+        message = json.dumps({"msg": [receiver, msg]})
         self.sock_.sendall(message.encode(FORMAT))
 
     # '{"msgall" : "message text"}'

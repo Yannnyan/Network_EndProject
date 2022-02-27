@@ -2,7 +2,8 @@ import json
 
 r = 15
 startPort = 55000
-filename = "ports.json"
+filename = "../CLIENT//ports.json"
+
 
 def extractPort():
     file = open(filename, 'r')

@@ -11,7 +11,7 @@ BUFFERSIZE = 1024
 class Server_():
 
     def __init__(self):
-        # The SOCK_STREAM represents UDP connection
+        # The SOCK_STREAM represents TCP connection
         self.socket_ = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket_.bind((IP, PORT))
         self.socket_.listen(15)
@@ -54,8 +54,10 @@ class Server_():
             self.clients.pop(val)
         elif ex == "msg":
             if val[0] in self.clients.keys():
-                message = json.dumps({"msg": val[1]})
-                self.sendMessageToClient(self.onlineClients(), addr)
+                message1 = json.dumps({"msg": val[1]})
+                self.sendMessageToClient(message1, self.clients[val[0]])
+                if self.clients[val[0]] != addr:
+                    self.sendMessageToClient(message1, addr)
             else:
                 print("[SERVER] Client is not online!")
         elif ex == "msgall":

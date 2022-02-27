@@ -13,13 +13,16 @@ window.geometry("800x500")
 serveraddress: str = None
 client_name: str = None
 client: Client.Client_ = None
-onlineClients = None
+onlineClients = []
 isOnline = False
+selectedChatClient = None
+openWindows = {"main": window}
 
 listeningThread = None
 timer = None
 
 updateLogText = "Update Log"
+chatTextMessages = ""
 
 
 # This function is used when pressing the button a popup appears to receive user information about the name of the
@@ -124,7 +127,6 @@ def connectClient():
             listeningThread.start()
 
 
-
 def disconnectClient():
     global isOnline, listeningThread
     if isOnline is True:
@@ -138,13 +140,32 @@ def _from_rgb(rgb):
     return f'#{r:02x}{g:02x}{b:02x}'
 
 
+def selectComboBox(event):
+    global selectedChatClient
+    clientSelected = event.widget.get()
+    if clientSelected is not None:
+        selectedChatClient = clientSelected
+        # print(selectedChatClient + " Chat")
+
+
+def pressedEnterChat(chatText, event):
+    global client, selectedChatClient, chatTextMessages
+    if selectedChatClient is not None:
+        # client.sendMessage(event.widget.get(), selectedChatClient)
+        client.sendMessage(client.name + " : " + event.widget.get(), selectedChatClient)
+
+
 # func that creates a chat pop up to show the messages of the clients
 def showChat():
+    global onlineClients, openWindows
     chat = tk.Toplevel()
     chat.title("Chat")
     chat.lift()
     chat.attributes("-topmost", True)
     chat.geometry("600x400")
+    openWindows["chat"] = chat
+    func_close = partial(close_chat, chat)
+    chat.wm_protocol("WM_DELETE_WINDOW",func_close)
 
     top = tk.Frame(chat)
     top.pack(side=tk.TOP)
@@ -159,23 +180,49 @@ def showChat():
     chatText = tk.Text(chat, width=70, height=20, yscrollcommand=scrollbary.set, xscrollcommand=scrollbarx.set)
     chatText.configure(bg=_from_rgb((76, 230, 52)))
     chatText.pack(in_=top, side=tk.LEFT)
+    chatText.insert("1.0", chatTextMessages)
     scrollbary.config(command=chatText.yview)
     scrollbarx.config(command=chatText.xview)
 
     textBox = tk.Entry(chat, text="")
     textBox.pack(in_=bottom, side=tk.RIGHT)
+    func2 = partial(pressedEnterChat, chatText)
+    textBox.bind('<Return>', func2)
 
     style = ttk.Style()
     style.theme_use('clam')
     style.configure("TCombobox", fieldbackground="orange", background="white")
-    comboBox = ttk.Combobox(chat, width=20)
-    comboBox.pack(in_=bottom, side=tk.LEFT)
 
+    textVar = tk.StringVar()
+    comboBox = ttk.Combobox(chat, width=20, textvariable=textVar)
+    comboBox.pack(in_=bottom, side=tk.LEFT)
+    comboBox.bind('<<ComboboxSelected>>', selectComboBox)
+
+    comboBox['state'] = 'normal'
     comboBox['values'] = onlineClients
     comboBox.set("See online")
-    comboBox['state'] = 'readonly'
 
     chat.mainloop()
+
+def showFiles():
+    files_window = tk.Tk()
+    files_window.title("Available Files")
+    files_window.lift()
+    files_window.attributes("-topmost", True)
+    files_window.geometry("600x400")
+
+    top = tk.Frame(files_window)
+    top.pack(side= tk.TOP)
+    filesList = tk.Listbox(files_window, width= 30, height= 20)
+    filesList.pack(in_= top, side= tk.TOP)
+
+    bottom = tk.Frame(files_window)
+    bottom.pack(side= tk.BOTTOM)
+    downloadButton = tk.Button(files_window, text= "Download file")
+    downloadButton.pack(in_= bottom, side= tk.LEFT)
+    uploadButton = tk.Button(files_window, text = "Upload file")
+    uploadButton.pack(in_= bottom, side = tk.LEFT)
+
 
 
 def chatClient():
@@ -201,6 +248,7 @@ def showOnlineList():
 # Client sends a message to the gui with the command and the description to be executed and the gui reacts to display
 # that.
 def getMessageFromClient(message: str):
+    global onlineClients, chatTextMessages
     print("[CLIENT] got message from server. " + message)
     # '{"command" : "description"}'
     d: dict = json.loads(message)
@@ -210,7 +258,6 @@ def getMessageFromClient(message: str):
     print(ex)
     print(val)
     if ex == 'whoOnline':
-        global onlineClients
         onlineClients = val
         mes = ''
         for i in range(len(val)):
@@ -222,14 +269,26 @@ def getMessageFromClient(message: str):
 
     if ex == 'connect':
         updateLog("User Connected", val + " has connected to the server.")
+        onlineClients.append(val)
     if ex == "dc":
         updateLog("User Disconnected", client_name + " has disconnected from the server.")
     if ex == "msg":
         updateLog("User message", client_name + " has sent message to " + val)
+        chatTextMessages = chatTextMessages + "\n" + val
+        updateChat()
     if ex == "msgall":
         updateLog("User message all", client_name + " has sent message to everyone online.")
     if ex == "files":
         updateLog("Files available", ', '.join(val))
+
+
+def updateChat():
+    global openWindows
+    children = openWindows["chat"].winfo_children()
+    for child in children:
+        if isinstance(child, tk.Text):
+            child.delete("1.0", "end")
+            child.insert(tk.END, chatTextMessages)
 
 
 # updates the label that shows all the recent changes
@@ -246,13 +305,19 @@ def updateComponents():
     window.after(1000, updateComponents)
 
 
+def close_chat(chat):
+    global openWindows
+    openWindows.pop("chat")
+    chat.destroy()
+
+
 # function that closes all threads when exiting the client gui
 def close_window():
     global window, timer, listeningThread, isOnline, client
-    isOnline = False
-    if client is None:
+    if client is None or isOnline is False:
         window.destroy()
         return
+    isOnline = False
     client.disconnect()
     window.destroy()
 
@@ -266,12 +331,12 @@ button_disconnect = tk.Button(window, text="Disconnect", command=disconnectClien
 button_disconnect.grid(row=0, column=2, padx=10)
 button_showOnline = tk.Button(window, text="Show Online", command=clientGetUsers)
 button_showOnline.grid(row=0, column=3, padx=10)
-button_showFiles = tk.Button(window, text="Show files")
+button_showFiles = tk.Button(window, text="Show files", command= showFiles)
 button_showFiles.grid(row=0, column=4, padx=10)
 button_chat = tk.Button(window, text="Chat", command=chatClient)
 button_chat.grid(row=0, column=5, padx=10)
 # labels
-label_recentChanges = tk.Label(window, width=30, height=20, anchor=tk.N, text="Update log")
+label_recentChanges = tk.Label(window, width=30, height=20, anchor=tk.N, text="Update log", wraplength=200)
 label_recentChanges.config(bg="gray")
 label_recentChanges.grid(row=1, column=0, padx=10, pady=5)
 # timers, operations on window
