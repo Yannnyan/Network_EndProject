@@ -202,8 +202,9 @@ def showChat():
     comboBox.bind('<<ComboboxSelected>>', selectComboBox)
 
     comboBox['state'] = 'normal'
-    listcombo = onlineClients
-    listcombo.append('All')
+    listcombo = onlineClients.copy()
+    if not listcombo.__contains__('All'):
+        listcombo.append('All')
     comboBox['values'] = listcombo
     comboBox.set("See online")
 
@@ -274,7 +275,6 @@ def getMessageFromClient(message: str):
 
     if ex == 'connect':
         updateLog("User Connected", val + " has connected to the server.")
-        onlineClients.append(val)
     if ex == "dc":
         updateLog("User Disconnected", client_name + " has disconnected from the server.")
     if ex == "msg":

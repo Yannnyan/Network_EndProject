@@ -48,6 +48,10 @@ class Server_():
         if ex == "whoOnline":
             message = self.onlineClients()
             self.sendMessageToClient(message, addr)
+        elif ex == "updateOnline":
+            message = self.updateOnlineClients()
+            for address in self.clients.values():
+                self.sendMessageToClient(message, address)
         elif ex == "connect":
             self.connectClient(addr, val)
         elif ex == "dc":

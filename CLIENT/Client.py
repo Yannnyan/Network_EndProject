@@ -28,6 +28,8 @@ class Client_:
 
         message = json.dumps({"connect": self.name})
         self.sock_.sendall(message.encode(FORMAT))
+        mes = json.dumps({"updateOnline": ""})
+        self.sock_.sendall(mes.encode(FORMAT))
 
     # '{"whoOnline" : ""}'
     def get_users(self):
