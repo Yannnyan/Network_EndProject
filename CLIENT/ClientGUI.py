@@ -151,8 +151,10 @@ def selectComboBox(event):
 def pressedEnterChat(chatText, event):
     global client, selectedChatClient, chatTextMessages
     if selectedChatClient is not None:
-        # client.sendMessage(event.widget.get(), selectedChatClient)
-        client.sendMessage(client.name + " : " + event.widget.get(), selectedChatClient)
+        if selectedChatClient == 'All': # send message to everyone
+            client.send_msg_all(client.name + " : " + event.widget.get())
+        else: # send message to single person
+            client.sendMessage(client.name + " : " + event.widget.get(), selectedChatClient)
 
 
 # func that creates a chat pop up to show the messages of the clients
@@ -166,6 +168,7 @@ def showChat():
     openWindows["chat"] = chat
     func_close = partial(close_chat, chat)
     chat.wm_protocol("WM_DELETE_WINDOW",func_close)
+    chat.after(2000, )
 
     top = tk.Frame(chat)
     top.pack(side=tk.TOP)
@@ -199,7 +202,9 @@ def showChat():
     comboBox.bind('<<ComboboxSelected>>', selectComboBox)
 
     comboBox['state'] = 'normal'
-    comboBox['values'] = onlineClients
+    listcombo = onlineClients
+    listcombo.append('All')
+    comboBox['values'] = listcombo
     comboBox.set("See online")
 
     chat.mainloop()
@@ -273,11 +278,12 @@ def getMessageFromClient(message: str):
     if ex == "dc":
         updateLog("User Disconnected", client_name + " has disconnected from the server.")
     if ex == "msg":
-        updateLog("User message", client_name + " has sent message to " + val)
+        updateLog("User message", client_name + " has sent message to " + val + " .")
         chatTextMessages = chatTextMessages + "\n" + val
         updateChat()
-    if ex == "msgall":
-        updateLog("User message all", client_name + " has sent message to everyone online.")
+    if ex == "updateOnline":
+        onlineClients = val
+        updateLog("Update", "Online clients's list has updated.")
     if ex == "files":
         updateLog("Files available", ', '.join(val))
 

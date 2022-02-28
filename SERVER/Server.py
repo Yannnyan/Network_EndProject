@@ -72,6 +72,10 @@ class Server_():
         dictin = {"whoOnline": list(self.clients.keys())}
         return json.dumps(dictin)
 
+    def updateOnlineClients(self):
+        dictin = {"updateOnline": list(self.clients.keys)}
+        return json.dumps(dictin)
+
     def listFiles(self) -> str:
         return json.dumps({"files": self.files})
 

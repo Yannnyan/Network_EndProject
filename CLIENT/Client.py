@@ -49,7 +49,7 @@ class Client_:
         self.sock_.sendall(message.encode(FORMAT))
 
     # '{"msgall" : "message text"}'
-    def set_msg_all(self, msg):
+    def send_msg_all(self, msg):
         message = json.dumps({"msgall": msg})
         self.sock_.sendall(message.encode(FORMAT))
 
