@@ -38,11 +38,19 @@ class Server_():
         while (self.connectionDict[addressClient])[2]:
             data, addr = (self.connectionDict[addressClient])[0].recvfrom(BUFFERSIZE)
             print("[SERVER] Received message from client. " + data.decode(FORMAT))
-            self.executeCommand(data, addressClient)
+            listjsons = data.decode(FORMAT).split("}{")
+            if len(listjsons) != 1:
+                for i in range(len(listjsons)):
+                    if i % 2 == 0:
+                        listjsons[i] = listjsons[i] + "}"
+                    else:
+                        listjsons[i] = "{" + listjsons[i]
+            for son in listjsons:
+                self.executeCommand(son, addressClient)
 
     # '{"connect" : "name"}'
-    def executeCommand(self, command: bytes, addr: (str, int)):
-        d: dict = json.loads(command.decode(FORMAT))
+    def executeCommand(self, command: str, addr: (str, int)):
+        d: dict = json.loads(command)
         ex = list(d.keys())[0]
         val = list(d.values())[0]
         if ex == "whoOnline":
@@ -77,7 +85,7 @@ class Server_():
         return json.dumps(dictin)
 
     def updateOnlineClients(self):
-        dictin = {"updateOnline": list(self.clients.keys)}
+        dictin = {"updateOnline": list(self.clients.keys())}
         return json.dumps(dictin)
 
     def listFiles(self) -> str:

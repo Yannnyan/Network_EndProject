@@ -28,6 +28,9 @@ class Client_:
 
         message = json.dumps({"connect": self.name})
         self.sock_.sendall(message.encode(FORMAT))
+
+
+    def updateOnline(self):
         mes = json.dumps({"updateOnline": ""})
         self.sock_.sendall(mes.encode(FORMAT))
 
@@ -70,11 +73,17 @@ class Client_:
     def proceed(self):
         pass
 
-    def listenClient(self) -> str:
+    def listenClient(self) -> []:
         data, addr = self.sock_.recvfrom(BUFFERSIZE)
-        serData = data.decode(FORMAT)
         print("[CLIENT] " + " received data")
-        return serData
+        listjsons = data.decode(FORMAT).split("}{")
+        if len(listjsons) != 1:
+            for i in range(len(listjsons)):
+                if i % 2 == 0:
+                    listjsons[i] = listjsons[i] + "}"
+                else:
+                    listjsons[i] = "{" + listjsons[i]
+        return listjsons
 
 
 def main():
