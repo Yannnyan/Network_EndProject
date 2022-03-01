@@ -17,3 +17,4 @@ with open("../FILES/baby_shark.txt") as file:
         serversocket.sendto(buffer.encode("utf - 8"), clients["client1"])
 
 serversocket.sendto("finish".encode("utf - 8"), clients["client1"])
+serversocket.close()

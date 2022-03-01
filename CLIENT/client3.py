@@ -15,6 +15,6 @@ with open("clientBaby_shark.txt","w") as file:
         if data.decode("utf - 8") == "finish":
             keepgoing = False
     file.close()
-
+clientsocket.close()
 
 
