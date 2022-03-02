@@ -83,6 +83,7 @@ def checksum(buffer: str):
 
 # just like the test, checks if the sum of the 16 bit groups with the carry and the checksum is 16 ones
 # if it is then everything is alright, if not then the packet is corrupt
+# return false if not corrupted, true if it is corrupted
 def checkCurroption(buffer: str, csum: str) -> bool:
     l = divBy16Bits(buffer)
     sum = 0
@@ -94,19 +95,19 @@ def checkCurroption(buffer: str, csum: str) -> bool:
         sum = sum + carry
         bsum = bin(int(bin(sum)[-16:], 2))
         if bin(int(bsum, 2) + int(csum, 2)) == checker:
-            return True
-        else:
             return False
+        else:
+            return True
     elif len(bsum) == 18:
         if bin(int(bsum, 2) + int(csum, 2)) == checker:
-            return True
-        else:
             return False
+        else:
+            return True
     else:
         s = conv16bits(int(bsum, 2))
         if bin(int(s, 2) + int(csum, 2)) == checker:
-            return True
-        else:
             return False
+        else:
+            return True
 
 

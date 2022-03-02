@@ -61,8 +61,10 @@ class CC:
         try:
             dPacket = self.unpackPacket(packet=packet)
             if checksum.checkCurroption(dPacket["data"], dPacket["checksum"]):
+                print("[CLIENT] received corrupted message")
                 self.sendNACK(dPacket["seq"]) # currupted message, send another.
             else:
+                print("[CLIENT] received valid message")
                 packetSeq = dPacket["seq"]
                 self.packets[packetSeq] = dPacket["data"]
                 heapq.heappush(self.heapSequencePacket, packetSeq)

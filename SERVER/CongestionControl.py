@@ -35,17 +35,18 @@ class CC:
     def startSending(self):
         self.listeningThread.start()
         self.timer.start()
-        while self.running:
-            while len(self.packets) < self.windowsize:
-                self.sendNewPacket()
+        while len(self.packets) < self.windowsize and self.running:
+            print("[SERVER] sending new packet " + self.sequenceNumber)
+            self.sendNewPacket()
         self.reader.close()
 
     def resendPackets(self):
         while self.running:
-            if len(self.sendAgain) == 0:
+            if len(self.sendAgain.isEmpty()):
                 time.sleep(1)
-            dt = self.sendAgain[0][0] - time.time()
+            dt = self.sendAgain.heap[1][0] - time.time()
             if dt < 0:  # can resend packet now
+                print("[SERVER] sending old packet " + str(self.sendAgain.heap[1][1]))
                 self.sendOldPacket()
             else:  # still time to wait
                 time.sleep(dt)
@@ -56,25 +57,42 @@ class CC:
         self.sock.sendto(buf, self.addressClient)
 
     # reads buffer from the file, generates a buffer and returns it
-    def readFromFile(self) -> str:
+    def readFromFile(self, n) -> str:
         try:
-            buffer = self.reader.read(BUFFERSIZE).decode("utf - 8")
+            buffer = self.reader.read(n).decode("utf - 8")
             return buffer
         # just in case, why would it happen?
         except OSError:
             raise OSError
 
+    def lengthPacket(self, packet: dict):
+        try:
+            s = json.dumps(packet)
+            return len(s)
+        except ValueError:
+            raise ValueError
+
     # return json string represents packet to be sent
     def generateNewPacket(self) -> str:
         global BUFFERSIZE
-        buffer = self.readFromFile()
         packet = {
             "seq": self.sequenceNumber,
-            "checksum": checksum.checksum(buffer),
-            "data": buffer,
-            "type": "new"
+            "checksum": "",
+            "data": "",
+            "type": "new",
+            "filler": ""
             # in [req , new] - from the server side the type would be new message, or request for ack
         }
+        buffer = self.readFromFile(BUFFERSIZE - self.lengthPacket(packet) - 18) # len(checksum) = 18
+        csum = checksum.checksum(buffer)
+        packet["checksum"] = csum
+        packet["data"] = buffer
+        fil = ""
+        lengthPac = self.lengthPacket(packet)
+        while lengthPac < BUFFERSIZE:
+            fil = fil + "s"
+            lengthPac += 1
+        packet["filler"] = fil
         self.packets[self.sequenceNumber] = packet
         self.sendAgain.insert(time.time() + self.timeToWait, self.sequenceNumber)
         self.sequenceNumber += 1
@@ -85,8 +103,15 @@ class CC:
             "seq": packetSeq,
             "checksum": "",
             "data": "",
-            "type": "req"
+            "type": "req",
+            "filler": ""
         }
+        lengthPack = self.lengthPacket(packet)
+        fil = ""
+        while lengthPack < BUFFERSIZE:
+            fil = fil + "s"
+            lengthPack += 1
+        packet["filler"] = fil
         return json.dumps(packet)
 
     def sendRequestPacket(self, packetSeq: int):
@@ -98,8 +123,10 @@ class CC:
         self.sendBuffer(packet)
 
     def sendOldPacket(self):
-        packetSeq = self.sendAgain.heap[0][0]
-        self.sendAgain.DecreaseKey(packetSeq,time.time() + self.timeToWait)
+        if len(self.sendAgain.heap) == 1:
+            return
+        packetSeq = self.sendAgain.heap[1][1]
+        self.sendAgain.DecreaseKey(packetSeq, time.time() + self.timeToWait)
         self.sendBuffer(self.packets[packetSeq])
 
     # "{
@@ -158,5 +185,24 @@ class CC:
         except KeyError:
             self.sendRequestPacket(packetSeq=packetSeq)
 
+    def sendStopPacket(self):
+        packet = {
+            "seq": "",
+            "checksum": "",
+            "data": "",
+            "type": "stop",
+            "filler": ""
+        }
+        packetlength = self.lengthPacket(packet)
+        fil = ""
+        while packetlength < BUFFERSIZE:
+            fil = fil + "s"
+            packetlength += 1
+        packet["filler"] = fil
+        self.sendBuffer(json.dumps(packet))
+
+    def stopServer(self):
+        self.sendStopPacket()
+        self.running = False
     # go back n, stop and wait, selective repeat,
     # slow start, threshold, cut in half,
