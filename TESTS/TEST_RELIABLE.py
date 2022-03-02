@@ -35,7 +35,8 @@ class reliable(unittest.TestCase):
         t2 = threading.Thread(target=self.clientThreadFunc)
         t1.start()
         t2.start()
-
+    def test_closeServer(self):
+        pass
     def test_sendBuffer(self):
         pass
 

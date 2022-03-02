@@ -20,6 +20,7 @@ class CC:
         self.running = True
         self.timer = threading.Thread(target=self.resendPackets)
         self.listeningThread = threading.Thread(target= self.receiveARQ)
+        self.lock = threading.Lock()
         try:
             self.reader = open(file, "rb")
         # probably the os couldn't find the specified file path
@@ -36,12 +37,14 @@ class CC:
         self.listeningThread.start()
         self.timer.start()
         while len(self.packets) < self.windowsize and self.running:
-            print("[SERVER] sending new packet " + self.sequenceNumber)
+            print("[SERVER] sending new packet " + str(self.sequenceNumber))
             self.sendNewPacket()
         self.reader.close()
 
     def resendPackets(self):
-        while self.running:
+        # self.running is False only when the file has ended.
+        # self.sendAgain is empty only when the client received all the packets fully
+        while self.running or not self.sendAgain.isEmpty():
             if len(self.sendAgain.isEmpty()):
                 time.sleep(1)
             dt = self.sendAgain.heap[1][0] - time.time()
@@ -50,11 +53,15 @@ class CC:
                 self.sendOldPacket()
             else:  # still time to wait
                 time.sleep(dt)
+        # then we know for certain we can stop
+        self.stopServer()
 
     # receives a constructed packet, encodes it and sends it to the client.
     def sendBuffer(self, buffer: str):
+        self.lock.acquire() # socket is not thread safe
         buf = buffer.encode("utf - 8")
         self.sock.sendto(buf, self.addressClient)
+        self.lock.release()
 
     # reads buffer from the file, generates a buffer and returns it
     def readFromFile(self, n) -> str:
@@ -84,6 +91,9 @@ class CC:
             # in [req , new] - from the server side the type would be new message, or request for ack
         }
         buffer = self.readFromFile(BUFFERSIZE - self.lengthPacket(packet) - 18) # len(checksum) = 18
+        if len(buffer) == 0:
+            self.running = False
+            return None
         csum = checksum.checksum(buffer)
         packet["checksum"] = csum
         packet["data"] = buffer
@@ -93,8 +103,8 @@ class CC:
             fil = fil + "s"
             lengthPac += 1
         packet["filler"] = fil
-        self.packets[self.sequenceNumber] = packet
-        self.sendAgain.insert(time.time() + self.timeToWait, self.sequenceNumber)
+        self.changePackets("insert", self.sequenceNumber, packet)
+        self.changeHeap("insert", self.sequenceNumber)
         self.sequenceNumber += 1
         return json.dumps(packet)
 
@@ -120,26 +130,36 @@ class CC:
 
     def sendNewPacket(self):
         packet = self.generateNewPacket()
-        self.sendBuffer(packet)
+        if packet is not None:
+            self.sendBuffer(packet)
+
+    # this function makes the access to the heap thread safe
+    def changeHeap(self, com, packetSeq):
+        self.lock.acquire()
+        if com == "DecreaseKey":
+            self.sendAgain.DecreaseKey(packetSeq, time.time() + self.timeToWait)
+        elif com == "insert":
+            self.sendAgain.insert(time.time() + self.timeToWait, packetSeq)
+        self.lock.release()
 
     def sendOldPacket(self):
         if len(self.sendAgain.heap) == 1:
             return
         packetSeq = self.sendAgain.heap[1][1]
-        self.sendAgain.DecreaseKey(packetSeq, time.time() + self.timeToWait)
+        self.changeHeap("DecreaseKey",packetSeq)
         self.sendBuffer(self.packets[packetSeq])
 
     # "{
     # "seq": ,
     # "checksum": ,
     # "data": ,
-    # "type":
+    # "type": ,
+    # "filler:
     #   }"                  <- packet formula expected
     # This method supposed to be a thread's func to receive messages constantly from the client.
     def receiveARQ(self):
         global BUFFERSIZE
         waiting = True
-        # timeStamp = time.time()
         while waiting:
             data, addr = self.sock.recvfrom(BUFFERSIZE)
             # try to loads the dict if exception occurs then there was a corruption
@@ -149,6 +169,8 @@ class CC:
                 packetSeq: int = dPacket["seq"]
                 # handles the possible outcomes of the received packet
                 self.handleARQ(packetSeq=packetSeq, dPacket=dPacket)
+                if dPacket["type"] == "stop":
+                    waiting = False
             # occurs if the json string is damaged, then send request the ack packet again.
             except ValueError:
                 # can't know what is this message then send it again after timeout automatically
@@ -162,6 +184,13 @@ class CC:
         except:
             raise ValueError()
 
+    def changePackets(self, com, key, val):
+        self.lock.acquire()
+        if com == "pop":
+            self.packets.pop(key)
+        elif com == "insert":
+            self.packets[key] = val
+        self.lock.release()
     def handleARQ(self, packetSeq: int, dPacket: dict):
         try:
             # value does not exist in dict- might be multiple ACK that are received after a timeout...
@@ -171,7 +200,7 @@ class CC:
             if dPacket["type"] == "ACK":
                 # value exists in dict then remove it. No need to send it again it is received safely
                 # send the next new packet
-                self.packets.pop(packetSeq)
+                self.changePackets("pop", packetSeq, "")
                 self.sendAgain.remove(packetSeq)
                 self.sendNewPacket()
             # the packet with this specific seq num is corrupted

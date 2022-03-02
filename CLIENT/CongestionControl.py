@@ -18,6 +18,10 @@ class CC:
         self.listeningThread = threading.Thread(target=self.receivePackets)
         self.writer = open(filename, "wb")
 
+    def stopClient(self):
+        self.running = False
+
+
     # main function in this class
     def startReceiving(self):
         self.listeningThread.start()
@@ -74,13 +78,21 @@ class CC:
             # don't care server will send another packet
             pass
 
+    def lengthPacket(self,packet):
+        try:
+            return len(json.dumps(packet))
+        except ValueError:
+            raise ValueError
+
     def generateNACKPacket(self, seqNum: int)-> str:
         packet = {
             "seq": seqNum,
             "checksum": "",
             "data": "",
-            "type": "NACK"
+            "type": "NACK",
+            "fill": ""
         }
+        packet = self.fillPacket(packet)
         return json.dumps(packet)
 
     def generateACKPacket(self, seqNum: int) -> str:
@@ -88,8 +100,10 @@ class CC:
             "seq": seqNum,
             "checksum": "",
             "data": "",
-            "type": "ACK"
+            "type": "ACK",
+            "fill": ""
         }
+        packet = self.fillPacket(packet)
         return json.dumps(packet)
 
     def sendACK(self, packetSeq):
@@ -99,3 +113,22 @@ class CC:
     def sendNACK(self, packetSeq):
         packet = self.generateNACKPacket(packetSeq)
         self.sock.sendto(packet,self.serverAddress)
+
+    def fillPacket(self, packet: dict) -> dict:
+        lengthPack = self.lengthPacket(packet)
+        fil = ""
+        while lengthPack < BUFFERSIZE:
+            fil = fil + "s"
+            lengthPack += 1
+        packet["fill"] = fil
+        return packet
+
+    def sendStopPacket(self):
+        packet = {
+            "seq": "",
+            "checksum": "",
+            "data": "",
+            "type": "stop",
+            "fill": ""
+        }
+        self.fillPacket(packet)
