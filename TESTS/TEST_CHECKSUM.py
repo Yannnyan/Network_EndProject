@@ -15,10 +15,12 @@ class checkssum(unittest.TestCase):
 
         #csum = checksum.checksum(a)
         #csum = checksum.checksum(b)
-        csum = checksum.checksum(c)
+        #csum = checksum.checksum(c)
+        csum = checksum.checksum("")
         #l = checksum.divBy16Bits(b)
         #l = checksum.divBy16Bits(a)
-        l = checksum.divBy16Bits(c)
+        #l = checksum.divBy16Bits(c)
+        l = checksum.divBy16Bits("")
         sum = 0
         for i in range(len(l)):
             sum += int(l[i],2)

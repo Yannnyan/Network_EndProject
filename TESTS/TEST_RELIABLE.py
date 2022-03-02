@@ -1,9 +1,11 @@
+import json
 import socket
 import unittest
 import socket
 import threading
 import CLIENT.CongestionControl
 import SERVER.CongestionControl
+from Algorithms import checksum
 from SERVER import CongestionControl
 from CLIENT import CongestionControl
 
@@ -39,7 +41,10 @@ class reliable(unittest.TestCase):
 
     def test_generateNewPacket(self):
         # check if the generated buffer matches the buffersize set
-        self.assertEqual(len(self.serverCC.generateNewPacket()), 1024)
+        packet = self.serverCC.generateNewPacket()
+        self.assertEqual(len(packet), 1024)
+        d = json.loads(packet)
+        self.assertFalse(checksum.checkCurroption(d["data"], d["checksum"]))
         self.serverCC.reader.close()
 
     def test_generateACKPacket(self):
