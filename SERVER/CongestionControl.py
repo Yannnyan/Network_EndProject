@@ -15,7 +15,6 @@ class CC:
         self.sequenceNumber = 0
         self.packets = {}  # {seq num: buffer}
         self.sendAgain = Minheap.MinHeap()  # (timeStamp, seq num ) min queue by timestamps for thread to send packets again
-        self.seqToIndex = {} # {sequence num : index in sendAgain}
         self.windowsize = 1
         self.timeToWait = 2
         self.running = True
@@ -39,6 +38,7 @@ class CC:
         while self.running:
             while len(self.packets) < self.windowsize:
                 self.sendNewPacket()
+        self.reader.close()
 
     def resendPackets(self):
         while self.running:
@@ -105,7 +105,8 @@ class CC:
     # "{
     # "seq": ,
     # "checksum": ,
-    # "data":
+    # "data": ,
+    # "type":
     #   }"                  <- packet formula expected
     # This method supposed to be a thread's func to receive messages constantly from the client.
     def receiveARQ(self):
@@ -140,7 +141,7 @@ class CC:
             # don't care
             if packetSeq not in self.packets.keys():
                 return
-            if dPacket["data"] == "ACK":
+            if dPacket["type"] == "ACK":
                 # value exists in dict then remove it. No need to send it again it is received safely
                 # send the next new packet
                 self.packets.pop(packetSeq)
