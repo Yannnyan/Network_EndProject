@@ -1,6 +1,11 @@
+import json
 import threading
 import time
 import socket
+from Algorithms import Minheap
+from Algorithms import checksum
+
+BUFFERSIZE = 1024
 
 
 class CC:
@@ -8,125 +13,149 @@ class CC:
         self.addressClient = addressClient
         self.sock = serversocket
         self.sequenceNumber = 0
-        self.packets = []
+        self.packets = {}  # {seq num: buffer}
+        self.sendAgain = Minheap.MinHeap()  # (timeStamp, seq num ) min queue by timestamps for thread to send packets again
+        self.seqToIndex = {} # {sequence num : index in sendAgain}
         self.windowsize = 1
         self.timeToWait = 2
-        self.timer = threading.Timer(2, self.sendFile)
-        self.buffersize = 1024
-        self.file = file
-        self.reader = open(self.file, "r")
+        self.running = True
+        self.timer = threading.Thread(target=self.resendPackets)
+        self.listeningThread = threading.Thread(target= self.receiveARQ)
+        try:
+            self.reader = open(file, "rb")
+        # probably the os couldn't find the specified file path
+        except OSError:
+            raise OSError
+        # to seek into specific spot in the file, we just need to keep track of
+        # the number of received packets, and multiplie that by the size of the buffer.
+        # then we can know how much to seek into the file from the start.
+        # meaning that if a client were to stop the file at a specific spot, we could recover the
+        # last spot we stopped at.
 
-    def sendFile(self):
-        if len(self.packets) == 0:
-            self.sendBunch(self.addressClient)
+    # main function to be called from the server side
+    def startSending(self):
+        self.listeningThread.start()
+        self.timer.start()
+        while self.running:
+            while len(self.packets) < self.windowsize:
+                self.sendNewPacket()
 
-    def receiveACKS(self):
-        waiting = True
-        timeStamp = time.time()
-        while waiting:
-            # "{ {"seq": },{"checksum": }, {"data": } }                  <- packet formula
-            data, addr = self.sock.recvfrom(self.buffersize)
-            sendOld = False
-            # for i in range(len(listSequence)):
-            #     if self.sequenceNumber - self.windowsize <= listSequence[i] <= self.sequenceNumber:
-            #         pass
+    def resendPackets(self):
+        while self.running:
+            if len(self.sendAgain) == 0:
+                time.sleep(1)
+            dt = self.sendAgain[0][0] - time.time()
+            if dt < 0:  # can resend packet now
+                self.sendOldPacket()
+            else:  # still time to wait
+                time.sleep(dt)
 
-    def sendOldBunch(self):
-        for i in range(self.windowsize):
-            self.sendBuffer(self.packets[i])
-
-    def sendNewBunch(self):
-        buffer = None
-        for i in range(self.windowsize):
-            buffer = self.reader.read(self.buffersize)
-            self.sendBuffer(buffer)
-
+    # receives a constructed packet, encodes it and sends it to the client.
     def sendBuffer(self, buffer: str):
         buf = buffer.encode("utf - 8")
-        self.packets.append(buffer)
-        self.sequenceNumber += 1
-        self.packets.append(buffer)
         self.sock.sendto(buf, self.addressClient)
 
+    # reads buffer from the file, generates a buffer and returns it
+    def readFromFile(self) -> str:
+        try:
+            buffer = self.reader.read(BUFFERSIZE).decode("utf - 8")
+            return buffer
+        # just in case, why would it happen?
+        except OSError:
+            raise OSError
 
-def conv16bits(num):
-    if num == 0:
-        return binaryStringByte('\0') + binaryStringByte('\0')
-    else:
-        l = num
-        res = ""
-        while l != 0:
-            if l % 2 == 1:
-                res = '1' + res
+    # return json string represents packet to be sent
+    def generateNewPacket(self) -> str:
+        global BUFFERSIZE
+        buffer = self.readFromFile()
+        packet = {
+            "seq": self.sequenceNumber,
+            "checksum": checksum.checksum(buffer),
+            "data": buffer,
+            "type": "new"
+            # in [req , new] - from the server side the type would be new message, or request for ack
+        }
+        self.packets[self.sequenceNumber] = packet
+        self.sendAgain.insert(time.time() + self.timeToWait, self.sequenceNumber)
+        self.sequenceNumber += 1
+        return json.dumps(packet)
+
+    def generateRequestForAckPacket(self, packetSeq: int) -> str:
+        packet = {
+            "seq": packetSeq,
+            "checksum": "",
+            "data": "",
+            "type": "req"
+        }
+        return json.dumps(packet)
+
+    def sendRequestPacket(self, packetSeq: int):
+        packet = self.generateRequestForAckPacket(packetSeq=packetSeq)
+        self.sendBuffer(packet)
+
+    def sendNewPacket(self):
+        packet = self.generateNewPacket()
+        self.sendBuffer(packet)
+
+    def sendOldPacket(self):
+        packetSeq = self.sendAgain.heap[0][0]
+        self.sendAgain.DecreaseKey(packetSeq,time.time() + self.timeToWait)
+        self.sendBuffer(self.packets[packetSeq])
+
+    # "{
+    # "seq": ,
+    # "checksum": ,
+    # "data":
+    #   }"                  <- packet formula expected
+    # This method supposed to be a thread's func to receive messages constantly from the client.
+    def receiveARQ(self):
+        global BUFFERSIZE
+        waiting = True
+        # timeStamp = time.time()
+        while waiting:
+            data, addr = self.sock.recvfrom(BUFFERSIZE)
+            # try to loads the dict if exception occurs then there was a corruption
+            try:
+                # raises ValueError
+                dPacket: dict = self.readJsonIntoDict(data.decode("utf - 8"))
+                packetSeq: int = dPacket["seq"]
+                # handles the possible outcomes of the received packet
+                self.handleARQ(packetSeq=packetSeq, dPacket=dPacket)
+            # occurs if the json string is damaged, then send request the ack packet again.
+            except ValueError:
+                # can't know what is this message then send it again after timeout automatically
+                continue
+
+    # receives json string and reads it into dict
+    def readJsonIntoDict(self, data) -> dict:
+        try:
+            dPacket: dict = json.loads(data)
+            return dPacket
+        except:
+            raise ValueError()
+
+    def handleARQ(self, packetSeq: int, dPacket: dict):
+        try:
+            # value does not exist in dict- might be multiple ACK that are received after a timeout...
+            # don't care
+            if packetSeq not in self.packets.keys():
+                return
+            if dPacket["data"] == "ACK":
+                # value exists in dict then remove it. No need to send it again it is received safely
+                # send the next new packet
+                self.packets.pop(packetSeq)
+                self.sendAgain.remove(packetSeq)
+                self.sendNewPacket()
+            # the packet with this specific seq num is corrupted
+            # send it again.
             else:
-                res = '0' + res
-            l = int(l / 2)
-        while len(res) < 16:
-            res = '0' + res
-        return res
+                # send seq num packet again automatically.
+                return
+                # if the json is damaged -> the parsed json dict is damaged -> this error occurs
+        # only if ARQ packet is corrupted.
+        # send the request for the ARQ packet again
+        except KeyError:
+            self.sendRequestPacket(packetSeq=packetSeq)
 
-
-def oneComplement(buf):
-    res = list(buf)
-    for i in range(2,len(buf)):
-        if buf[i] == '0':
-            res[i] = '1'
-        else:
-            res[i] = '0'
-    return "".join(res)
-
-
-def checksum(buffer: str):
-    listbytesbuffer = divBy16Bits(buffer)
-    sum = 0
-    for i in range(len(listbytesbuffer)):
-        sum += int(listbytesbuffer[i], 2)
-    bsum = bin(sum)
-    print(bsum)
-    print(len(bsum))
-    print(sum)
-    carry = 0
-    if len(bsum) > 18:  # 0b1111... for some reason
-        carry = len(bsum) - 18
-        sum = sum + carry
-        bsum = bin(sum)
-        s = bin(int(bsum[-16:],2))
-        return oneComplement(s)
-    p = len(bsum)
-    if len(bsum) < 18:
-        bSum = "0b" + conv16bits(sum)
-        return oneComplement(bSum)
-    if len(bsum) == 18:
-        return oneComplement(bsum)
-
-
-
-# go back n, stop and wait, selective repeat,
-# slow start, threshold, cut in half,
-
-def divBy16Bits(buffer: str) -> []:
-    listbuf = []
-    if len(buffer) % 2 == 0:
-        for i in range(0, len(buffer) - 1, 2):
-            listbuf.append(binaryStringByte(buffer[i]) + binaryStringByte(buffer[i + 1]))
-    else:
-        for i in range(0, len(buffer) - 2, 2):
-            listbuf.append(binaryStringByte(buffer[i]) + binaryStringByte(buffer[i + 1]))
-        listbuf.append(binaryStringByte('\0') + binaryStringByte(buffer[len(buffer) - 1]))
-    return listbuf
-
-
-def binaryStringByte(cHar):
-    l = ord(cHar)
-    if l == 0:
-        return "00000000"
-    ret = ''
-    while l != 0:
-        if l % 2 == 1:
-            ret = '1' + ret
-        else:
-            ret = '0' + ret
-        l = int(l / 2)
-    while len(ret) < 8:
-        ret = '0' + ret
-    return ret
+    # go back n, stop and wait, selective repeat,
+    # slow start, threshold, cut in half,
