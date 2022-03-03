@@ -1,6 +1,64 @@
 # Network_EndProject
 This is our final project in networking course.
 
+# Preview
+In this project we built a client server model to represent a chat, in which users can communicate and send files.
+The main purpose of this project is to more experienced with using tcp sockets, and building reliable data transfer protocols with congestion control to send files with.
+
+
+# Our Idea
+our idea is to implement RDT that supports the ARQ protocol [Selective repeat](https://en.wikipedia.org/wiki/Selective_Repeat_ARQ). </br>
+
+![image](https://user-images.githubusercontent.com/82415308/156571449-d71d3f5f-9992-4ae4-b043-ca1b609f1180.png)
+
+The congestion control supports the algorithm which is similar to the Reno tcp protocol. </br>
+
+In the following picture, we can see the change in window size as packets are received over time. Whenever a packet is lost the window size cuts by half.
+![image](https://user-images.githubusercontent.com/82415308/156570470-f63fc904-0865-4eed-a4ef-83b7cb81c530.png)
+
+
+# Directories
+
+1. [SERVER](https://github.com/Yannnyan/Network_EndProject/tree/main/SERVER)
+2. [CLIENT](https://github.com/Yannnyan/Network_EndProject/tree/main/CLIENT)
+3. [FILES](https://github.com/Yannnyan/Network_EndProject/tree/main/FILES)
+4. [TESTS](https://github.com/Yannnyan/Network_EndProject/tree/main/TESTS)
+5. [Algorithms](https://github.com/Yannnyan/Network_EndProject/tree/main/Algorithms)
+
+# Classes
+### SERVER
+1. Server - represents the most 
+
+### CLIENT
+1. Client - represents the basic client class that communicates with the server.
+2. ClientGUI - represent comfortable UI for the user to communicate with the server.
+### FILES
+> description of the files inside FILES directory
+1. txt - text files
+2. png - images
+3. generateFile.py - Generate files of a certain size. 
+4. 
+### TESTS
+1. Server RDT tests
+2. checksum tests
+3. congestion control tests
+
+### Algorithms
+1. Minheap - basic data structure that enables to decrease key with O log n complexity as opposed to pythons default heap that does not support this operation.
+2. checksum - computes the checksum of the buffer given to the checksum and, contains a function that checks whether the checksum received is valid. Allows to verify that the data transfered is valid.
+3. 
+
+
+
+
+
+
+
+
+
+
+
+
 ## Summary of the pdf
 > Generally - we need to build a client server communication design in python to send and receive files.
 1) gui := bonus.
