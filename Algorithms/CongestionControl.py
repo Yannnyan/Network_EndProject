@@ -1,34 +1,46 @@
+import math
 
 class CC:
-    def __init__(self):
-        self.wnd = 1
-        self.ssthresh = 1
-        self.increase = 2
-        self.IW = 1 # initial window that is sent during three way handshake
-        self.LW = 2 # Loss window is the size of the congestion window after timeout
-        self.RW = 1 # Restart window
-        self.FW = 1 # FLIGHT window is the amout of bytes sent but not yet aknowledged
+    def __init__(self, MSS):
+        self.MSS = MSS
+        self.cwnd = 2
+        self.ss = True
+        self.keepsend = True
+        self.ssthresh = 2
+        self.acks = 0
+
 
     def recvMessage(self, mes):
         if mes == "ACK":
-            self.recvACK()
-        elif mes == "NACK":
-            self.recvNACK()
+            self.acks += 1
+            if self.acks == self.cwnd:
+                self.acks = 0
+                if self.ss:
+                    self.slowStart()
+                else:
+                    self.congestionAvoidance()
         elif mes == "LOST":
-            self.packetLost()
+            self.resetcwnd()
 
-    def congestionAvoidance(self): # wnd > ssthresh
-        pass
+    def congestionAvoidance(self):  # wnd > ssthresh
+        self.cwnd += math.ceil(self.MSS / self.cwnd)
 
-    def slowStart(self): # wnd <= ssthresh
-        pass
+    def slowStart(self):  # wnd <= ssthresh
+        self.cwnd *= 2
+        if self.cwnd > self.ssthresh:
+            self.ss = False
 
-    def recvACK(self):
-        pass
+    def resetcwnd(self):
+        # Fast recovery parameter, not going back to slow start
+        self.ssthresh = math.ceil(self.cwnd / 2)
+        self.cwnd = self.ssthresh
 
-    def recvNACK(self):
-        pass
 
-    def packetLost(self):
-        pass
-
+    # def recvACK(self):
+    #     pass
+    #
+    # def recvNACK(self):
+    #     pass
+    #
+    # def packetLost(self):
+    #     pass

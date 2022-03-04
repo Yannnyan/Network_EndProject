@@ -5,7 +5,7 @@ import socket
 import os
 from Algorithms import Minheap
 from Algorithms import checksum
-
+from Algorithms import CongestionControl
 BUFFERSIZE = 1024
 
 
@@ -16,9 +16,9 @@ class RDT:
         self.sequenceNumber = 0
         self.packets = {}  # {seq num: buffer}
         self.sendAgain = Minheap.MinHeap()  # (timeStamp, seq num ) min queue by timestamps for thread to send packets again
-        self.windowsize = 1
         self.timeToWait = 2
         self.running = True
+        self.cc = CongestionControl.CC(BUFFERSIZE)
         self.timer = threading.Thread(target=self.resendPackets)
         self.listeningThread = threading.Thread(target=self.receiveARQ)
         self.sendingThread = threading.Thread(target=self.startSending)
@@ -46,12 +46,16 @@ class RDT:
             self.lock.release()
             run = self.changeIsRunning("get")
             self.lock.release()
-            while self.changePackets("size") < self.windowsize and run:
+            cwnd = self.changeCC("getcwnd")
+            self.lock.release()
+            while self.changePackets("size") < cwnd and run:
                 self.lock.release()
                 print("[SERVER] sending new packet " + str(self.changeSeq("get")))
                 self.lock.release()
                 self.sendNewPacket()
                 run = self.changeIsRunning("get")
+                self.lock.release()
+                cwnd = self.changeCC("getcwnd")
                 self.lock.release()
             self.lock.release()
             time.sleep(1)
@@ -78,6 +82,7 @@ class RDT:
             if dt < 0:  # can resend packet now
                 print("[SERVER] sending old packet " + str(self.changeHeap("get")[1]))
                 self.lock.release()
+                self.changeCC("LOST")
                 self.sendOldPacket()
                 print(self.changeHeap("size"))
                 self.lock.release()
@@ -194,7 +199,15 @@ class RDT:
             print("[SERVER] sending new packet")
             self.sendBuffer(packet)
 
-
+    def changeCC(self, com):
+        self.lock.acquire()
+        if com == "getcwnd":
+            return self.cc.cwnd
+        elif com == "ACK":
+            self.cc.recvMessage("ACK")
+        elif com == "LOST":
+            self.cc.recvMessage("LOST")
+        self.lock.release()
     # this function makes the access to the heap thread safe
     def changeHeap(self, com, packetSeq=0):
         self.lock.acquire()
@@ -254,7 +267,6 @@ class RDT:
     #   }"                  <- packet formula expected
     # This method supposed to be a thread's func to receive messages constantly from the client.
     def receiveARQ(self):
-        global BUFFERSIZE
         waiting = True
         while waiting:
             print("[SERVER] waiting to receive message")
@@ -318,6 +330,7 @@ class RDT:
                 self.changePackets("pop", packetSeq, "")
                 self.changeHeap("remove", packetSeq)
                 self.lock.release()
+                self.changeCC("ACK")
             if dPacket["type"] == "stop":
                 self.changeIsRunning("stop")
             # the packet with this specific seq num is corrupted
