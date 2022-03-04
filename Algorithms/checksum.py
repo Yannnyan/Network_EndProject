@@ -69,9 +69,9 @@ def checksum(buffer: str):
     # if a carry is generated then add it
     if len(bsum) > 18:  # 0b1111... for some reason
         carry = len(bsum) - 18
-        sum = sum + carry
+        sum = sum + int(bin(carry),2)
         bsum = bin(sum)
-        s = bin(int(bsum[-16:], 2))
+        s = "0b" + bsum[-16:]
         return oneComplement(s)
     # no carry is less than 18, 18 because the python formula for binary num is 0b and then 16 bits
     # if less than 18 then pad the remaining left side with zeros and add 0b to the start as binary form

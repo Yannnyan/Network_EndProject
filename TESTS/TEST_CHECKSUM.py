@@ -1,5 +1,5 @@
 import unittest
-from SERVER import CongestionControl
+from SERVER import RDTServer
 from Algorithms import checksum
 checker = bin(65535)
 print(checker)
@@ -12,15 +12,17 @@ class checkssum(unittest.TestCase):
         print(len(a))
         b = "1111111"
         c = "1"
-
+        d = "ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss"
         #csum = checksum.checksum(a)
         #csum = checksum.checksum(b)
         #csum = checksum.checksum(c)
-        csum = checksum.checksum("")
+        #csum = checksum.checksum("")
+        csum = checksum.checksum(d)
         #l = checksum.divBy16Bits(b)
         #l = checksum.divBy16Bits(a)
         #l = checksum.divBy16Bits(c)
-        l = checksum.divBy16Bits("")
+        #l = checksum.divBy16Bits("")
+        l = checksum.divBy16Bits(d)
         sum = 0
         for i in range(len(l)):
             sum += int(l[i],2)

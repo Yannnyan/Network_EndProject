@@ -3,11 +3,11 @@ import socket
 import unittest
 import socket
 import threading
-import CLIENT.CongestionControl
-import SERVER.CongestionControl
+import CLIENT.RDTClient
+import SERVER.RDTServer
 from Algorithms import checksum
-from SERVER import CongestionControl
-from CLIENT import CongestionControl
+from SERVER import RDTServer
+from CLIENT import RDTClient
 
 SERVERADDR = ("127.0.0.1", 55000)
 CLIENTADDR = ("127.0.0.1", 55001)
@@ -18,13 +18,13 @@ class reliable(unittest.TestCase):
     def setUp(self):
         self.serversock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.serversock.bind(SERVERADDR)
-        self.serverCC = SERVER.CongestionControl.CC(files[0], self.serversock, CLIENTADDR)
+        self.serverCC = SERVER.RDTServer.RDT(files[0], self.serversock, CLIENTADDR)
         self.clientsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.clientsock.bind(CLIENTADDR)
-        self.clientCC = CLIENT.CongestionControl.CC("baby_shark_client.txt", self.clientsock, SERVERADDR)
+        self.clientCC = CLIENT.RDTClient.RDT("baby_shark_client.txt", self.clientsock, SERVERADDR)
 
     def serverThreadFunc(self):
-        self.serverCC.startSending()
+        self.serverCC.startServer()
 
     def clientThreadFunc(self):
         self.clientCC.startReceiving()
@@ -33,8 +33,12 @@ class reliable(unittest.TestCase):
     def test_startServer(self):
         t1 = threading.Thread(target=self.serverThreadFunc)
         t2 = threading.Thread(target=self.clientThreadFunc)
-        t1.start()
         t2.start()
+        t1.start()
+        t1.join()
+        t2.join()
+        self.serversock.close()
+        self.clientsock.close()
     def test_closeServer(self):
         pass
     def test_sendBuffer(self):

@@ -2,13 +2,14 @@ import json
 import threading
 import time
 import socket
+import os
 from Algorithms import Minheap
 from Algorithms import checksum
 
 BUFFERSIZE = 1024
 
 
-class CC:
+class RDT:
     def __init__(self, file: str, serversocket: socket.socket, addressClient):
         self.addressClient = addressClient
         self.sock = serversocket
@@ -19,13 +20,15 @@ class CC:
         self.timeToWait = 2
         self.running = True
         self.timer = threading.Thread(target=self.resendPackets)
-        self.listeningThread = threading.Thread(target= self.receiveARQ)
+        self.listeningThread = threading.Thread(target=self.receiveARQ)
+        self.sendingThread = threading.Thread(target=self.startSending)
         self.lock = threading.Lock()
         try:
             self.reader = open(file, "rb")
         # probably the os couldn't find the specified file path
         except OSError:
             raise OSError
+        self.sizeFile = os.stat(file).st_size
         # to seek into specific spot in the file, we just need to keep track of
         # the number of received packets, and multiplie that by the size of the buffer.
         # then we can know how much to seek into the file from the start.
@@ -33,44 +36,91 @@ class CC:
         # last spot we stopped at.
 
     # main function to be called from the server side
-    def startSending(self):
+    def startServer(self):
         self.listeningThread.start()
         self.timer.start()
-        while len(self.packets) < self.windowsize and self.running:
-            print("[SERVER] sending new packet " + str(self.sequenceNumber))
-            self.sendNewPacket()
+        self.sendingThread.start()
+
+    def startSending(self):
+        while self.changeIsRunning("get"):
+            self.lock.release()
+            run = self.changeIsRunning("get")
+            self.lock.release()
+            while self.changePackets("size") < self.windowsize and run:
+                self.lock.release()
+                print("[SERVER] sending new packet " + str(self.changeSeq("get")))
+                self.lock.release()
+                self.sendNewPacket()
+                run = self.changeIsRunning("get")
+                self.lock.release()
+            self.lock.release()
+            time.sleep(1)
+        self.lock.release()
         self.reader.close()
 
     def resendPackets(self):
         # self.running is False only when the file has ended.
         # self.sendAgain is empty only when the client received all the packets fully
-        while self.running or not self.sendAgain.isEmpty():
-            if len(self.sendAgain.isEmpty()):
+        run = self.changeIsRunning("get")
+        self.lock.release()
+        while not self.changeHeap("isempty") or run:
+            self.lock.release()
+            if self.changeHeap("isempty"):
+                self.lock.release()
+                print("[SERVER] no messages to be resent")
                 time.sleep(1)
-            dt = self.sendAgain.heap[1][0] - time.time()
+                run = self.changeIsRunning("get")
+                self.lock.release()
+                continue
+            self.lock.release()
+            dt = self.changeHeap("get", 0)[0] - time.time()
+            self.lock.release()
             if dt < 0:  # can resend packet now
-                print("[SERVER] sending old packet " + str(self.sendAgain.heap[1][1]))
+                print("[SERVER] sending old packet " + str(self.changeHeap("get")[1]))
+                self.lock.release()
                 self.sendOldPacket()
+                print(self.changeHeap("size"))
+                self.lock.release()
             else:  # still time to wait
                 time.sleep(dt)
-        # then we know for certain we can stop
-        self.stopServer()
+            run = self.changeIsRunning("get")
+            self.lock.release()
+        print("[SERVER] done resending packets")
 
     # receives a constructed packet, encodes it and sends it to the client.
     def sendBuffer(self, buffer: str):
-        self.lock.acquire() # socket is not thread safe
-        buf = buffer.encode("utf - 8")
-        self.sock.sendto(buf, self.addressClient)
-        self.lock.release()
+        try:
+            self.lock.acquire()  # socket is not thread safe
+            buf = buffer.encode("utf - 8")
+            self.sock.sendto(buf, self.addressClient)
+            self.lock.release()
+        except OSError: # client closed connection
+            self.lock.release()
+            size = self.changePackets("size")
+            self.lock.release()
+            keys = list(self.changePackets("getkeys"))
+            self.lock.release()
+            for key in keys:
+                self.changeHeap("remove")
+                self.lock.release()
+                self.changePackets("pop", key)
+            return
 
     # reads buffer from the file, generates a buffer and returns it
     def readFromFile(self, n) -> str:
+        if not self.changeIsRunning("get"):
+            self.lock.release()
+            return ""
+        self.lock.release()
         try:
-            buffer = self.reader.read(n).decode("utf - 8")
+            d = n - 1 if self.sizeFile >= n else n - self.sizeFile
+            buffer = self.reader.read(d)
+            buffer = buffer.decode("utf - 8")
             return buffer
         # just in case, why would it happen?
-        except OSError:
-            raise OSError
+        except (IOError, EOFError, OSError):
+            print("IO ERROR")
+            raise EOFError
 
     def lengthPacket(self, packet: dict):
         try:
@@ -82,20 +132,25 @@ class CC:
     # return json string represents packet to be sent
     def generateNewPacket(self) -> str:
         global BUFFERSIZE
+        seqNum = self.changeSeq("get")
+        self.lock.release()
         packet = {
-            "seq": self.sequenceNumber,
+            "seq": seqNum,
             "checksum": "",
             "data": "",
             "type": "new",
             "filler": ""
             # in [req , new] - from the server side the type would be new message, or request for ack
         }
-        buffer = self.readFromFile(BUFFERSIZE - self.lengthPacket(packet) - 18) # len(checksum) = 18
-        if len(buffer) == 0:
-            self.running = False
-            return None
+        buffer = self.readFromFile(BUFFERSIZE - self.lengthPacket(packet) - 18)  # len(checksum) = 18
+        print(str(len(buffer)))
+        if len(buffer) == 0 or buffer == None:
+            print("failed reading")
+            self.stopServer()
+            return "failed"
         csum = checksum.checksum(buffer)
         packet["checksum"] = csum
+        print(str(len(packet["checksum"])))
         packet["data"] = buffer
         fil = ""
         lengthPac = self.lengthPacket(packet)
@@ -103,9 +158,14 @@ class CC:
             fil = fil + "s"
             lengthPac += 1
         packet["filler"] = fil
-        self.changePackets("insert", self.sequenceNumber, packet)
-        self.changeHeap("insert", self.sequenceNumber)
-        self.sequenceNumber += 1
+        seqNum = self.changeSeq("get")
+        self.lock.release()
+        self.changePackets("insert", seqNum, packet)
+        seqNum = self.changeSeq("get")
+        self.lock.release()
+        self.changeHeap("insert", seqNum)
+        self.changeSeq("increment")
+
         return json.dumps(packet)
 
     def generateRequestForAckPacket(self, packetSeq: int) -> str:
@@ -130,24 +190,60 @@ class CC:
 
     def sendNewPacket(self):
         packet = self.generateNewPacket()
-        if packet is not None:
+        if packet != "failed":
+            print("[SERVER] sending new packet")
             self.sendBuffer(packet)
 
+
     # this function makes the access to the heap thread safe
-    def changeHeap(self, com, packetSeq):
+    def changeHeap(self, com, packetSeq=0):
         self.lock.acquire()
         if com == "DecreaseKey":
             self.sendAgain.DecreaseKey(packetSeq, time.time() + self.timeToWait)
         elif com == "insert":
             self.sendAgain.insert(time.time() + self.timeToWait, packetSeq)
+        elif com == "get":  # returns the () first value
+            return self.sendAgain.heap[1]
+        elif com == "isempty":
+            return self.sendAgain.isEmpty()
+        elif com == "size":
+            return self.sendAgain.size() - 1
+        elif com == "remove":
+            return self.sendAgain.remove(packetSeq)
+        self.lock.release()
+
+    def changeSeq(self, com):
+        self.lock.acquire()
+        if com == "get":
+            return self.sequenceNumber
+        elif com == "increment":
+            self.sequenceNumber += 1
+        self.lock.release()
+
+    def changeIsRunning(self, com):
+        self.lock.acquire()
+        if com == "stop":
+            self.running = False
+        elif com == "get":
+            return self.running
         self.lock.release()
 
     def sendOldPacket(self):
-        if len(self.sendAgain.heap) == 1:
+        # print(self.lock.locked())
+        if self.changeHeap("size") == 0:
+            self.lock.release()
             return
-        packetSeq = self.sendAgain.heap[1][1]
-        self.changeHeap("DecreaseKey",packetSeq)
-        self.sendBuffer(self.packets[packetSeq])
+        self.lock.release()
+        print(self.changeHeap("size"))
+        self.lock.release()
+        packetSeq = self.changeHeap("get")[1]
+        self.lock.release()
+        self.changeHeap("remove", packetSeq)
+        self.lock.release()
+        self.changeHeap("insert", packetSeq)
+        packet = self.changePackets("get", packetSeq)
+        self.lock.release()
+        self.sendBuffer(json.dumps(packet))
 
     # "{
     # "seq": ,
@@ -161,7 +257,14 @@ class CC:
         global BUFFERSIZE
         waiting = True
         while waiting:
-            data, addr = self.sock.recvfrom(BUFFERSIZE)
+            print("[SERVER] waiting to receive message")
+            try:
+                data, addr = self.sock.recvfrom(BUFFERSIZE)
+            except OSError:
+                self.changeIsRunning("stop")
+                self.lock.release()
+                waiting = False
+                return
             # try to loads the dict if exception occurs then there was a corruption
             try:
                 # raises ValueError
@@ -184,25 +287,39 @@ class CC:
         except:
             raise ValueError()
 
-    def changePackets(self, com, key, val):
+    def changePackets(self, com, key=0, val=None):
+        if val is None:
+            val = {}
         self.lock.acquire()
         if com == "pop":
             self.packets.pop(key)
         elif com == "insert":
             self.packets[key] = val
+        elif com == "size":
+            return len(list(self.packets.keys()))
+        elif com == "get":
+            return self.packets[key]
+        elif com == "getkeys":
+            return self.packets.keys()
         self.lock.release()
+
     def handleARQ(self, packetSeq: int, dPacket: dict):
         try:
             # value does not exist in dict- might be multiple ACK that are received after a timeout...
             # don't care
-            if packetSeq not in self.packets.keys():
+            if packetSeq not in self.changePackets("getkeys"):
+                self.lock.release()
                 return
+            self.lock.release()
             if dPacket["type"] == "ACK":
                 # value exists in dict then remove it. No need to send it again it is received safely
                 # send the next new packet
+                print("[SERVER] received ACK about packet " + str(packetSeq))
                 self.changePackets("pop", packetSeq, "")
-                self.sendAgain.remove(packetSeq)
-                self.sendNewPacket()
+                self.changeHeap("remove", packetSeq)
+                self.lock.release()
+            if dPacket["type"] == "stop":
+                self.changeIsRunning("stop")
             # the packet with this specific seq num is corrupted
             # send it again.
             else:
@@ -215,8 +332,11 @@ class CC:
             self.sendRequestPacket(packetSeq=packetSeq)
 
     def sendStopPacket(self):
+        print("[SERVER] sending stop packet")
+        seqNum = self.changeSeq("get")
+        self.lock.release()
         packet = {
-            "seq": "",
+            "seq": seqNum,
             "checksum": "",
             "data": "",
             "type": "stop",
@@ -228,10 +348,15 @@ class CC:
             fil = fil + "s"
             packetlength += 1
         packet["filler"] = fil
+        seqNum = self.changeSeq("get")
+        self.lock.release()
+        self.changePackets("insert",seqNum ,packet)
+        seqNum = self.changeSeq("get")
+        self.lock.release()
+        self.changeHeap("insert", seqNum)
         self.sendBuffer(json.dumps(packet))
 
     def stopServer(self):
         self.sendStopPacket()
-        self.running = False
     # go back n, stop and wait, selective repeat,
     # slow start, threshold, cut in half,

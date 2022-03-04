@@ -10,4 +10,4 @@ def generateFile(size: int, name: str): # size in kilobtyes, name
             if byt == 1023:
                 file.write("\n")
 
-generateFile(4,"baby_shark")
+generateFile(1000,"baby_shark")
