@@ -9,6 +9,29 @@ The main purpose of this project is to more experienced with using tcp sockets, 
 # Our Idea
 our idea is to implement RDT that supports the ARQ protocol [Selective repeat](https://en.wikipedia.org/wiki/Selective_Repeat_ARQ). </br>
 
+# How we've done it
+## Packet Contruction
+The RDTServer.RDT class consists of few fields. Such as:
+| Description\Field | Sequence number | running | window size | timeout | Timer| receivingThread | sendingThread | packets | sendAgain |
+|-|-|-|-|-|-|-|-|-|-|
+| ~ | The current message's sequence number | bool- Is the server running or not | The maximum amount of new packets that could be sent at specific time | The amount of time a thread waits before resending a packet| Thread that resends the packets again | Thread that listens to the client's messages | Thread that sends new messages to the client based on the window size | Dict stores last packets sent | Minimum heap that stores tuple of time to be sent and sequence number, sorted by time to be sent |
+----------------------------------------------------
+- Each time the server wants to send a message it constructs a packet consists of few fields that help the client digest the data inside the packet.
+- The server fills the sequence field inside the packet with its current sequence number.
+- Each packet is filled with 1024 bytes exactly. This is done to prevent the data from being merged into another received packet at the client side, and vice versa.
+- To transfer data we used a field called Data to store a buffer sized at most 1024 bytes but could be lower depends on the size of the fields.
+- In order to identify the purpose of the packet we used a field named Type, which could consist of the following values: new- new packet, stop- stop sending, req- request ack.
+- The most important is the checksum field to address the white elephant in the room, which is data curroption. We've used 16 bits checksum which has 99.98% chance to detect errors.
+
+Every message should look something like this: 
+![image](https://user-images.githubusercontent.com/82415308/156677825-793ce11e-ec5a-475c-9f8a-9aa27cf7d490.png)
+
+## Threads
+
+## ARQ System
+
+## Congestion control protocol
+
 ![image](https://user-images.githubusercontent.com/82415308/156571449-d71d3f5f-9992-4ae4-b043-ca1b609f1180.png)
 
 The congestion control supports the algorithm which is similar to the Reno tcp protocol. </br>
