@@ -15,6 +15,9 @@ client_name: str = None
 client: Client.Client_ = None
 onlineClients = []
 isOnline = False
+downloading = False
+selectedFile = None
+files = []
 selectedChatClient = None
 openWindows = {"main": window}
 
@@ -198,7 +201,7 @@ def showChat():
     style.configure("TCombobox", fieldbackground="orange", background="white")
 
     textVar = tk.StringVar()
-    comboBox = ttk.Combobox(chat, width=20, textvariable=textVar, postcommand= updateChat)
+    comboBox = ttk.Combobox(chat, width=20, textvariable=textVar, postcommand=updateChat)
     comboBox.pack(in_=bottom, side=tk.LEFT)
     comboBox.bind('<<ComboboxSelected>>', selectComboBox)
 
@@ -214,7 +217,8 @@ def showChat():
 
 
 def showFiles():
-    files_window = tk.Tk()
+    global window
+    files_window = tk.Toplevel()
     files_window.title("Available Files")
     files_window.lift()
     files_window.attributes("-topmost", True)
@@ -222,15 +226,32 @@ def showFiles():
 
     top = tk.Frame(files_window)
     top.pack(side=tk.TOP)
-    filesList = tk.Listbox(files_window, width=30, height=20)
+
+    lang = tk.StringVar(value=tuple(files))
+    filesList = tk.Listbox(files_window, width=30, height=20, listvariable=lang)
     filesList.pack(in_=top, side=tk.TOP)
+    filesList.bind('<<ListboxSelect>>', selectFile)
 
     bottom = tk.Frame(files_window)
     bottom.pack(side=tk.BOTTOM)
-    downloadButton = tk.Button(files_window, text="Download file")
+    downloadButton = tk.Button(files_window, text="Download file", command = downloadFile)
     downloadButton.pack(in_=bottom, side=tk.LEFT)
     uploadButton = tk.Button(files_window, text="Upload file")
     uploadButton.pack(in_=bottom, side=tk.LEFT)
+
+    files_window.mainloop()
+
+
+def selectFile(Event):
+    global selectedFile
+    selectedFile = Event.widget().curselection()
+
+
+def downloadFile(Event):
+    global client, downloading
+    if not downloading or selectedFile is None:
+        downloading = True
+        client.download_file(selectedFile)
 
 
 def chatClient():
@@ -253,10 +274,17 @@ def showOnlineList():
     toplist.mainloop()
 
 
+def filesButtonfunc():
+    global client
+    if isOnline:
+        client.get_list_file()
+        showFiles()
+
+
 # Client sends a message to the gui with the command and the description to be executed and the gui reacts to display
 # that.
 def getMessageFromClient(message: str):
-    global onlineClients, chatTextMessages
+    global onlineClients, chatTextMessages, files
     print("[CLIENT] got message from server. " + message)
     # '{"command" : "description"}'
     d: dict = json.loads(message)
@@ -286,6 +314,7 @@ def getMessageFromClient(message: str):
         onlineClients = val
         updateLog("Update", "Online clients's list has updated.")
     if ex == "files":
+        files = val
         updateLog("Files available", ', '.join(val))
 
 
@@ -330,6 +359,7 @@ def close_window():
     client.disconnect()
     window.destroy()
 
+
 # external
 comboBox = None
 chatText = None
@@ -342,7 +372,7 @@ button_disconnect = tk.Button(window, text="Disconnect", command=disconnectClien
 button_disconnect.grid(row=0, column=2, padx=10)
 button_showOnline = tk.Button(window, text="Show Online", command=clientGetUsers)
 button_showOnline.grid(row=0, column=3, padx=10)
-button_showFiles = tk.Button(window, text="Show files", command=showFiles)
+button_showFiles = tk.Button(window, text="Show files", command=filesButtonfunc)
 button_showFiles.grid(row=0, column=4, padx=10)
 button_chat = tk.Button(window, text="Chat", command=chatClient)
 button_chat.grid(row=0, column=5, padx=10)

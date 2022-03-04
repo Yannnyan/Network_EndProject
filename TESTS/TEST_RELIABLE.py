@@ -11,18 +11,19 @@ from CLIENT import RDTClient
 
 SERVERADDR = ("127.0.0.1", 55000)
 CLIENTADDR = ("127.0.0.1", 55001)
-files = ["../FILES/baby_shark.txt"]
+files = ["../FILES/baby_shark.txt", "../FILES/image1.jpeg"]
 
 
 class reliable(unittest.TestCase):
     def setUp(self):
         self.serversock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.serversock.bind(SERVERADDR)
+        #self.serverCC = SERVER.RDTServer.RDT(files[0], self.serversock, CLIENTADDR)
         self.serverCC = SERVER.RDTServer.RDT(files[0], self.serversock, CLIENTADDR)
         self.clientsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.clientsock.bind(CLIENTADDR)
-        self.clientCC = CLIENT.RDTClient.RDT("baby_shark_client.txt", self.clientsock, SERVERADDR)
-
+        #self.clientCC = CLIENT.RDTClient.RDT("baby_shark_client.txt", self.clientsock, SERVERADDR)
+        self.clientCC = CLIENT.RDTClient.RDT("image1.jpeg", self.clientsock, SERVERADDR)
     def serverThreadFunc(self):
         self.serverCC.startServer()
 

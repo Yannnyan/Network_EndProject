@@ -60,7 +60,6 @@ class Client_:
 
     # '{"files" : ""}'
     def get_list_file(self):
-        self.client_Running = False
         message = json.dumps({"files": ""})
         self.sock_.sendall(message.encode(FORMAT))
 

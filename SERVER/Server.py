@@ -1,6 +1,8 @@
 import json
 import socket
 import threading
+import os
+from os.path import isfile, join
 
 PORT = 49153
 IP = "127.0.0.1"
@@ -16,7 +18,7 @@ class Server_():
         self.socket_.bind((IP, PORT))
         self.socket_.listen(15)
         self.clients = {}  # {name : (ip,port) }
-        self.files = []  # [filenames]
+        self.files = [f for f in os.listdir("../FILES") if isfile(join("../FILES", f)) ]  # [filenames]
         self.connectionDict = {}
         # self.threadPool = []
         # self.listeningThread = threading.Thread(target=self.acceptConnections)
