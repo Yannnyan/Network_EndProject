@@ -47,6 +47,9 @@ This uml represents how our system works most basically. </br>
 - A thread is running in the background and checking if data needs to be retransmitted by checking the length of the dict, if data needs to be retransmitted it goes to the heap and peeks and sends the minimum while the time to send the packets has passed, then increases the key of the resent packet by a set timeout seconds. </br> In the following picture we can see how the selective repeat algorithm operates upon lost packets and how it provides reliabillity. We can see similarities between this algorithm and between our algorithm, when we fix a cwnd size untill all packages are received. This way we can ensure all packages are received, since we keep resending lost packages untill we receive ack about them from the client.
 ![image](https://user-images.githubusercontent.com/82415308/156571449-d71d3f5f-9992-4ae4-b043-ca1b609f1180.png)
 ## Congestion control
+CC UML </br>
+![image](https://user-images.githubusercontent.com/82415308/156896281-c4cc9986-df73-4b42-a74f-88e40f084a3f.png)
+
 - The serverRDT class contains an object of Congestion Control class, which handles the congestion window size by receiving ACKS or LOST messages.
 - our congestion control algorithm does not change the packet size at all.
 - slow start algorithm - start with cwnd of size 2, meaning that we can send only 2 packets. If the number of consecutive sequence ACKS is greater or equal to the cwnd size, then multiply the cwnd by 2.
