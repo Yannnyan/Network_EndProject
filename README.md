@@ -16,7 +16,7 @@ The RDTServer.RDT class consists of few fields. Such as:
 |-|-|-|-|-|-|-|-|-|-|
 | ~ | The current message's sequence number | bool- Is the server running or not | The maximum amount of new packets that could be sent at specific time | The amount of time a thread waits before resending a packet| Thread that resends the packets again | Thread that listens to the client's messages | Thread that sends new messages to the client based on the window size | Dict stores last packets sent | Minimum heap that stores tuple of time to be sent and sequence number, sorted by time to be sent |
 ----------------------------------------------------
-## Packet Contruction
+## Packet Construction
 - Each time the server wants to send a message it constructs a packet consists of few fields that help the client digest the data inside the packet.
 - The server fills the sequence field inside the packet with its current sequence number.
 - Each packet is filled with 1024 bytes exactly. This is done to prevent the data from being merged into another received packet at the client side, and vice versa.
@@ -27,9 +27,29 @@ The RDTServer.RDT class consists of few fields. Such as:
 Every message should look something like this: 
 ![image](https://user-images.githubusercontent.com/82415308/156677825-793ce11e-ec5a-475c-9f8a-9aa27cf7d490.png)
 
+## Download file from Server
+- The Client opens a udp socket with our RDT implemented class, and listens to it. 
+- Then it sends a TCP message to the server asking to download a specific file.
+-  The server responds with one of two ways depends whether the client already asked to download a file or not. It opens a udp socket and saves it or resets parameters. 
+-  The server then sends a SYN with the name of the file to the client's listening socket.
+-  The client sends back SYN-ACK with the number of bytes already ACKNOWLEGED.
+-  The server then redirects the file pointer to the current byte and starts sending the file again.
+## ARQ System
+- The Server sends a packet formatted as specified above.
+- The client responds with ACK with the packet is received successfully. Or with NACK if the packet is corrupted. If it failed to read the packet it does nothing and wait for the server to resend the packet.
+## Reliablility
+- The serverRDT class represents the handler for the udp reliable data transfer. It sends and receives all the messages associated with udp.
+- The serverRDT contains data structures to track the acknowledged packets. A dict of sequence number followed by a packet - tracks the unacknowledged packets. A minimum heap sorted by the time to send the packet, with value of sequence number of the unacknowledged packed.
+- A thread is running in the background and checking if data needs to be retransmitted by checking the length of the dict, if data needs to be retransmitted it goes to the heap and peeks and sends the minimum while the time to send the packets has passed, then increases the key of the resent packet by a set timeout seconds.
+## Congestion control
+- The serverRDT class contains an object of Congestion Control class, which handles the congestion window size by receiving ACKS or LOST messages.
+- our congestion control algorithm does not change the packet size at all.
+- slow start algorithm - start with cwnd of size 2, meaning that we can send only 2 packets. If the number of consecutive sequence ACKS is greater or equal to the cwnd size, then multiply the cwnd by 2.
+- ResetCWND - if we encounter a LOST at any point we will decrease the cwnd size times 1/2 and set the current thresh to be cwnd times 1/2. Once we encountered a loss we will not return to slow start algorithm.
+- Congestion avoidance - 
 ## Threads
 
-## ARQ System
+
 
 ## Congestion control protocol
 
