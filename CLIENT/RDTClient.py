@@ -139,11 +139,15 @@ class RDT:
                 if dPacket["type"] == "new":
                     print("[CLIENT] type is new")
                     packetSeq = dPacket["seq"]
-                    if not self.changePackets("getkeys").__contains__(packetSeq):
-                        self.lock.release()
-                        self.changePackets("insert", packetSeq, dPacket["data"])
-                        self.changeHeap("push", packetSeq)
-                    else:
+                    try:
+                        if not self.changePackets("getkeys").__contains__(packetSeq):
+                            self.lock.release()
+                            print("[CLIENT] does not contain")
+                            self.changePackets("insert", packetSeq, dPacket["data"])
+                            self.changeHeap("push", packetSeq)
+                        else:
+                            self.lock.release()
+                    except (KeyError, ValueError):
                         self.lock.release()
                     self.sendACK(packetSeq=packetSeq)
                     # pegions holes

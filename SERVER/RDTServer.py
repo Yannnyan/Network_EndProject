@@ -20,6 +20,7 @@ class RDT:
         self.sendAgain = Minheap.MinHeap()  # (timeStamp, seq num ) min queue by timestamps for thread to send packets again
         self.timeToWait = 2
         self.running = True
+        self.sendingNew = True
         self.bytesACK = 0
         self.cc = CongestionControl.CC(BUFFERSIZE)
         self.timer = threading.Thread(target=self.resendPackets)
@@ -60,7 +61,12 @@ class RDT:
             self.lock.release()
             cwnd = self.changeCC("getcwnd")
             self.lock.release()
-            while self.changePackets("size") < cwnd and run:
+            if self.changeHeap("size") == 0 and self.sendingNew is False:
+                self.lock.release()
+                self.stopServer()
+            else:
+                self.lock.release()
+            while self.changePackets("size") < cwnd and run and self.sendingNew:
                 self.lock.release()
                 print("[SERVER] sending new packet " + str(self.changeSeq("get")))
                 self.lock.release()
@@ -110,8 +116,11 @@ class RDT:
             buf = buffer.encode("utf - 8")
             self.sock.sendto(buf, self.addressClient)
             self.lock.release()
-        except OSError: # client closed connection
+        except OSError as er: # client closed connection
             self.lock.release()
+            print("[SERVER] OSError client is closed ")
+            print(er)
+            self.changeIsRunning("stop")
             size = self.changePackets("size")
             self.lock.release()
             keys = list(self.changePackets("getkeys"))
@@ -141,7 +150,7 @@ class RDT:
     def lengthPacket(self, packet: dict):
         try:
             s = json.dumps(packet)
-            return len(s)
+            return len(s) + 4
         except ValueError:
             raise ValueError
 
@@ -162,13 +171,14 @@ class RDT:
         print(str(len(buffer)))
         if len(buffer) == 0 or buffer is None:
             print("failed reading")
-            self.stopServer()
+            self.sendingNew = False
             return "failed"
         csum = checksum.checksum(buffer)
         packet["checksum"] = csum
         print(str(len(packet["checksum"])))
         packet["data"] = buffer
-        fil = ""
+        fil = ''
+        data = packet["data"]
         lengthPac = self.lengthPacket(packet)
         while lengthPac < BUFFERSIZE:
             fil = fil + "s"
