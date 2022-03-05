@@ -24,6 +24,7 @@ class reliable(unittest.TestCase):
         self.clientsock.bind(CLIENTADDR)
         #self.clientCC = CLIENT.RDTClient.RDT("baby_shark_client.txt", self.clientsock, SERVERADDR)
         self.clientCC = CLIENT.RDTClient.RDT("image1.jpeg", self.clientsock, SERVERADDR)
+
     def serverThreadFunc(self):
         self.serverCC.startServer()
 
@@ -40,8 +41,10 @@ class reliable(unittest.TestCase):
         t2.join()
         self.serversock.close()
         self.clientsock.close()
+
     def test_closeServer(self):
         pass
+
     def test_sendBuffer(self):
         pass
 

@@ -1,7 +1,8 @@
 import json
 import socket
-import threading
-from CLIENT import portsManager
+
+import CLIENT.RDTClient
+from Algorithms import portsManager
 
 PORT = None
 PORTSERVER = 49153
@@ -16,6 +17,9 @@ class Client_:
         self.name = name
         self.client_Running = True
         self.sock_ = None
+        self.RDTServerPort = None
+        self.RDT = None
+        self.RDTSock = None
 
     # '{"connect" : "Joseph"}
     def connect(self):
@@ -25,8 +29,11 @@ class Client_:
         self.sock_.bind((self.SERVERIP, PORT))
         addr = (self.SERVERIP, PORTSERVER)
         self.sock_.connect(addr)
+        self.portRDT = portsManager.getPort()
+        self.RDTSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.RDTSock.bind((self.SERVERIP,self.portRDT))
 
-        message = json.dumps({"connect": self.name})
+        message = json.dumps({"connect": [self.name, self.portRDT]})
         self.sock_.sendall(message.encode(FORMAT))
 
 
@@ -45,6 +52,8 @@ class Client_:
         self.sock_.sendall(message.encode(FORMAT))
         self.client_Running = False
         self.sock_.close()
+        self.RDTSock.close()
+        portsManager.disconnectPort(self.portRDT)
         portsManager.disconnectPort(PORT)
         print("[CLIENT] Disconnected!")
 
@@ -65,24 +74,31 @@ class Client_:
 
     # '{"download" : "name_of_file"}'
     def download_file(self, name_of_file):
-        pass
+        self.RDT.addFile(name_of_file)
+        self.RDT.startReceiving()
+        message = json.dumps({"download": name_of_file})
+        self.sock_.sendall(message.encode(FORMAT))
 
     # '{"proceed" : ""}'
     # proceed to download file ?
-    def proceed(self):
-        pass
+    def proceed(self, name_of_file):
+        message = json.dumps({"proceed": name_of_file})
+        self.sock_.sendall(message.encode(FORMAT))
 
     def listenClient(self) -> []:
-        data, addr = self.sock_.recvfrom(BUFFERSIZE)
-        print("[CLIENT] " + " received data")
-        listjsons = data.decode(FORMAT).split("}{")
-        if len(listjsons) != 1:
-            for i in range(len(listjsons)):
-                if i % 2 == 0:
-                    listjsons[i] = listjsons[i] + "}"
-                else:
-                    listjsons[i] = "{" + listjsons[i]
-        return listjsons
+        try:
+            data, addr = self.sock_.recvfrom(BUFFERSIZE)
+            print("[CLIENT] " + " received data")
+            listjsons = data.decode(FORMAT).split("}{")
+            if len(listjsons) != 1:
+                for i in range(len(listjsons)):
+                    if i % 2 == 0:
+                        listjsons[i] = listjsons[i] + "}"
+                    else:
+                        listjsons[i] = "{" + listjsons[i]
+            return listjsons
+        except (OSError, ValueError):
+            return None
 
 
 def main():

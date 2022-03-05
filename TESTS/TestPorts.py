@@ -1,8 +1,7 @@
-import unittest
 import json
 
-FILE = "../CLIENT//ports.json"
-from CLIENT import portsManager
+FILE = "../Algorithms/ports.json"
+from Algorithms import portsManager
 
 
 def testGetPort():

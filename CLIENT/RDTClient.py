@@ -8,7 +8,7 @@ BUFFERSIZE = 1024
 
 
 class RDT:
-    def __init__(self, filename: str, sock: socket.socket, serverAddress: (str, int)):
+    def __init__(self, sock: socket.socket, serverAddress: (str, int)):
         self.sock = sock
         self.serverAddress = serverAddress
         self.running = True
@@ -16,8 +16,11 @@ class RDT:
         self.packets = {}  # {seq num: buffer}
         self.heapSequencePacket = []  # heap contains sequence numbers received
         self.listeningThread = threading.Thread(target=self.receivePackets)
-        self.writer = open(filename, "wb")
+        self.writer = None
         self.lock = threading.Lock()
+
+    def addFile(self, filename):
+        self.writer = open(filename, "wb")
 
     def stopClient(self, packetSeq):
         self.sendStopPacket(packetSeq = packetSeq)
@@ -26,12 +29,6 @@ class RDT:
     # main function in this class
     def startReceiving(self):
         self.listeningThread.start()
-        while self.changeIsRunning("get"):
-            self.lock.release()
-            self.receivePackets()
-        self.lock.release()
-        print("[CLIENT] closing stream")
-        self.writer.close()
 
     def receivePackets(self):
         while self.changeIsRunning("get"):
@@ -40,6 +37,7 @@ class RDT:
             print("[CLIENT] got packet")
             self.handlePacket(data.decode("utf - 8"))
         self.lock.release()
+        self.writer.close()
 
     # "{
     # "seq": ,

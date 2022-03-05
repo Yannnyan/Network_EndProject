@@ -1,10 +1,13 @@
 import json
 import threading
-from threading import Timer
+import sys
+
+sys.path.append(sys.path[0] + "/..")
+
 import tkinter as tk
 from tkinter import ttk
 from functools import partial
-from CLIENT import Client
+from CLIENT import Client, RDTClient
 
 window = tk.Tk()
 window.title("Main Menu")
@@ -22,7 +25,6 @@ selectedChatClient = None
 openWindows = {"main": window}
 
 listeningThread = None
-timer = None
 
 updateLogText = "Update Log"
 chatTextMessages = ""
@@ -34,8 +36,11 @@ chatTextMessages = ""
 def listenClient():
     while isOnline:
         messages = client.listenClient()
+        if messages is None or messages == []:
+            break
         for message in messages:
-            getMessageFromClient(message)
+            if message is not None:
+                getMessageFromClient(message)
 
 
 # starts the thread to listen the listen to messages the client is receiving
@@ -65,7 +70,8 @@ def checkValidAddress(address: str) -> bool:
 
 
 def clientGetUsers():
-    client.get_users()
+    if isOnline:
+        client.get_users()
 
 
 def pressOK(win, name, addressVar):
@@ -151,6 +157,10 @@ def selectComboBox(event):
         selectedChatClient = clientSelected
         # print(selectedChatClient + " Chat")
 
+def proceedDownload():
+    global client, isOnline, downloading, selectedFile
+    if isOnline and downloading:
+        client.proceed(selectedFile)
 
 def pressedEnterChat(chatText, event):
     global client, selectedChatClient, chatTextMessages
@@ -217,7 +227,7 @@ def showChat():
 
 
 def showFiles():
-    global window
+    global window, filesList
     files_window = tk.Toplevel()
     files_window.title("Available Files")
     files_window.lift()
@@ -231,23 +241,22 @@ def showFiles():
     filesList = tk.Listbox(files_window, width=30, height=20, listvariable=lang)
     filesList.pack(in_=top, side=tk.TOP)
     filesList.bind('<<ListboxSelect>>', selectFile)
-
     bottom = tk.Frame(files_window)
     bottom.pack(side=tk.BOTTOM)
-    downloadButton = tk.Button(files_window, text="Download file", command = downloadFile)
+    downloadButton = tk.Button(files_window, text="Download file", command=downloadFile)
     downloadButton.pack(in_=bottom, side=tk.LEFT)
-    uploadButton = tk.Button(files_window, text="Upload file")
-    uploadButton.pack(in_=bottom, side=tk.LEFT)
+    proceedButton = tk.Button(files_window, text="proceed download", command= proceedDownload)
+    proceedButton.pack(in_=bottom, side=tk.LEFT)
 
     files_window.mainloop()
 
 
 def selectFile(Event):
-    global selectedFile
-    selectedFile = Event.widget().curselection()
+    global selectedFile, filesList
+    selectedFile = files[filesList.curselection()[0]]
 
 
-def downloadFile(Event):
+def downloadFile():
     global client, downloading
     if not downloading or selectedFile is None:
         downloading = True
@@ -287,7 +296,11 @@ def getMessageFromClient(message: str):
     global onlineClients, chatTextMessages, files
     print("[CLIENT] got message from server. " + message)
     # '{"command" : "description"}'
-    d: dict = json.loads(message)
+    d: dict
+    try:
+        d: dict = json.loads(message)
+    except ValueError:
+        return
     ex = list(d.keys())[0]
     val = list(d.values())[0]
     print(d)
@@ -303,8 +316,13 @@ def getMessageFromClient(message: str):
         showOnlineList()
         updateLog("Users Online:", mes)
     if ex == 'connect':
-        updateLog("User Connected", val + " has connected to the server.")
+        updateLog("User Connected", val[0] + " has connected to the server.")
+        if val[0] == client.name:
+            client.RDTServerPort = val[1]
+            client.RDT = RDTClient.RDT(client.RDTSock, (client.SERVERIP, client.RDTServerPort))
         client.updateOnline()
+    if ex == 'portServer':
+        client.RDTServerPort = val
     if ex == "dc":
         updateLog("User Disconnected", client_name + " has disconnected from the server.")
     if ex == "msg":
@@ -316,6 +334,8 @@ def getMessageFromClient(message: str):
     if ex == "files":
         files = val
         updateLog("Files available", ', '.join(val))
+    if ex == "updateDownload":
+        updateLog("Download update", str(int(val)) + " precent completed")
 
 
 def updateChat():
@@ -332,6 +352,8 @@ def updateChat():
 # updates the label that shows all the recent changes
 def updateLog(title: str, message: str):
     global updateLogText
+    if len(updateLogText.split("\n")) > 9:
+        updateLogText = ""
     updateLogText += "\n" + "------- " + title + " -------" + "\n" + message
 
 
@@ -351,7 +373,7 @@ def close_chat(chat):
 
 # function that closes all threads when exiting the client gui
 def close_window():
-    global window, timer, listeningThread, isOnline, client
+    global window, listeningThread, isOnline, client
     if client is None or isOnline is False:
         window.destroy()
         return
@@ -363,6 +385,7 @@ def close_window():
 # external
 comboBox = None
 chatText = None
+filesList = None
 # buttons
 button_startClient = tk.Button(window, text="Start Client", command=startClient)
 button_startClient.grid(row=0, column=0, padx=10)

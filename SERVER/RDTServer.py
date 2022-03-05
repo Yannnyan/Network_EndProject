@@ -3,9 +3,11 @@ import threading
 import time
 import socket
 import os
+
 from Algorithms import Minheap
 from Algorithms import checksum
 from Algorithms import CongestionControl
+
 BUFFERSIZE = 1024
 
 
@@ -14,21 +16,31 @@ class RDT:
         self.addressClient = addressClient
         self.sock = serversocket
         self.sequenceNumber = 0
-        self.packets = {}  # {seq num: buffer}
+        self.packets = {}  # {seq num: packet}
         self.sendAgain = Minheap.MinHeap()  # (timeStamp, seq num ) min queue by timestamps for thread to send packets again
         self.timeToWait = 2
         self.running = True
+        self.bytesACK = 0
         self.cc = CongestionControl.CC(BUFFERSIZE)
         self.timer = threading.Thread(target=self.resendPackets)
         self.listeningThread = threading.Thread(target=self.receiveARQ)
         self.sendingThread = threading.Thread(target=self.startSending)
         self.lock = threading.Lock()
-        try:
-            self.reader = open(file, "rb")
-        # probably the os couldn't find the specified file path
-        except OSError:
-            raise OSError
-        self.sizeFile = os.stat(file).st_size
+        File = "../FILES/" + file
+        self.reader = open( File , "rb")
+        # try:
+        #
+        #     extensions = file.split('.')
+        #     # get the type of the document
+        #     extension = extensions[len(extensions)-1]
+        #     if extension == 'txt':
+        #
+        #     elif extension == 'jpeg':
+        #         pass
+        # # probably the os couldn't find the specified file path
+        # except OSError:
+        #     raise OSError
+        self.sizeFile = os.stat(File).st_size
         # to seek into specific spot in the file, we just need to keep track of
         # the number of received packets, and multiplie that by the size of the buffer.
         # then we can know how much to seek into the file from the start.
@@ -67,8 +79,7 @@ class RDT:
         # self.sendAgain is empty only when the client received all the packets fully
         run = self.changeIsRunning("get")
         self.lock.release()
-        while not self.changeHeap("isempty") or run:
-            self.lock.release()
+        while run:
             if self.changeHeap("isempty"):
                 self.lock.release()
                 print("[SERVER] no messages to be resent")
@@ -149,7 +160,7 @@ class RDT:
         }
         buffer = self.readFromFile(BUFFERSIZE - self.lengthPacket(packet) - 18)  # len(checksum) = 18
         print(str(len(buffer)))
-        if len(buffer) == 0 or buffer == None:
+        if len(buffer) == 0 or buffer is None:
             print("failed reading")
             self.stopServer()
             return "failed"
@@ -233,6 +244,14 @@ class RDT:
             self.sequenceNumber += 1
         self.lock.release()
 
+    def changeBytes(self, com, bytes = 0):
+        self.lock.acquire()
+        if com == "get":
+            return self.bytesACK
+        elif com == "increment":
+            self.bytesACK += bytes
+        self.lock.release()
+
     def changeIsRunning(self, com):
         self.lock.acquire()
         if com == "stop":
@@ -274,8 +293,6 @@ class RDT:
                 data, addr = self.sock.recvfrom(BUFFERSIZE)
             except OSError:
                 self.changeIsRunning("stop")
-                self.lock.release()
-                waiting = False
                 return
             # try to loads the dict if exception occurs then there was a corruption
             try:
@@ -327,6 +344,7 @@ class RDT:
                 # value exists in dict then remove it. No need to send it again it is received safely
                 # send the next new packet
                 print("[SERVER] received ACK about packet " + str(packetSeq))
+                self.changeBytes("increment", len(self.packets[packetSeq]["data"]))
                 self.changePackets("pop", packetSeq, "")
                 self.changeHeap("remove", packetSeq)
                 self.lock.release()
