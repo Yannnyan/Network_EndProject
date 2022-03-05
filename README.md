@@ -7,7 +7,7 @@ The main purpose of this project is to more experienced with using tcp sockets, 
 
 
 # Our Idea
-our idea is to implement RDT that supports the ARQ protocol [Selective repeat](https://en.wikipedia.org/wiki/Selective_Repeat_ARQ). </br>
+our idea is to implement RDT that supports the ARQ system [Selective repeat](https://en.wikipedia.org/wiki/Selective_Repeat_ARQ) but with changing window size that supports the algorithms slow start, congestion avoidance, FAST recovery. </br> 
 
 # How we've done it
 ## Class Fields
