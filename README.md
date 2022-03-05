@@ -6,11 +6,12 @@ The main purpose of this project is to experience and build reliable data transf
 
 # Our Idea
 our idea is to implement RDT that supports the ARQ system [Selective repeat](https://en.wikipedia.org/wiki/Selective_Repeat_ARQ) but with changing window size that supports the algorithms slow start, congestion avoidance, FAST recovery. </br> 
-
-
-[SERVER](https://github.com/Yannnyan/Network_EndProject/blob/main/SERVER/Server.py)
-[CLIENT](https://github.com/Yannnyan/Network_EndProject/blob/main/CLIENT/Client.py)
-
+</br>
+-------
+links to server and client </br>
+[SERVER](https://github.com/Yannnyan/Network_EndProject/blob/main/SERVER/Server.py) </br>
+[CLIENT](https://github.com/Yannnyan/Network_EndProject/blob/main/CLIENT/Client.py) </br>
+--------
 # How we've done it
 ## UML
 This uml represents how our system works most basically. </br>
