@@ -38,24 +38,27 @@ Every message should look something like this:
 ## Reliablility
 - The serverRDT class represents the handler for the udp reliable data transfer. It sends and receives all the messages associated with udp.
 - The serverRDT contains data structures to track the acknowledged packets. A dict of sequence number followed by a packet - tracks the unacknowledged packets. A minimum heap sorted by the time to send the packet, with value of sequence number of the unacknowledged packed.
-- A thread is running in the background and checking if data needs to be retransmitted by checking the length of the dict, if data needs to be retransmitted it goes to the heap and peeks and sends the minimum while the time to send the packets has passed, then increases the key of the resent packet by a set timeout seconds.
+- A thread is running in the background and checking if data needs to be retransmitted by checking the length of the dict, if data needs to be retransmitted it goes to the heap and peeks and sends the minimum while the time to send the packets has passed, then increases the key of the resent packet by a set timeout seconds. </br> In the following picture we can see how the selective repeat algorithm operates upon lost packets and how it provides reliabillity. We can see similarities between this algorithm and between our algorithm, when we fix a cwnd size untill all packages are received. This way we can ensure all packages are received, since we keep resending lost packages untill we receive ack about them from the client.
+![image](https://user-images.githubusercontent.com/82415308/156571449-d71d3f5f-9992-4ae4-b043-ca1b609f1180.png)
 ## Congestion control
 - The serverRDT class contains an object of Congestion Control class, which handles the congestion window size by receiving ACKS or LOST messages.
 - our congestion control algorithm does not change the packet size at all.
 - slow start algorithm - start with cwnd of size 2, meaning that we can send only 2 packets. If the number of consecutive sequence ACKS is greater or equal to the cwnd size, then multiply the cwnd by 2.
 - ResetCWND - if we encounter a LOST at any point we will decrease the cwnd size times 1/2 and set the current thresh to be cwnd times 1/2. Once we encountered a loss we will not return to slow start algorithm.
 - Congestion avoidance - 
+The congestion control supports an algorithm which is similar to the Reno tcp protocol. </br>
+In the following picture, we can see the change in window size as packets are received over time. Whenever a packet is lost the window size cuts by half, and the thresh is set to half the window size too. In our implementation we see similarity in these two properties. Additionaly to congestion avoidance and fast recovery, we also implemented slow start algorithm, that initializes the thresh faster than the congestion avoidance algorithm to check where is the limit for maximum packet sending speed.
+![image](https://user-images.githubusercontent.com/82415308/156570470-f63fc904-0865-4eed-a4ef-83b7cb81c530.png)
+## Data Integrity
+- To provide some security for the packets, we've created a regular 16 bit checksum algorithm.
+The Algorithm process: 
+
+
 ## Threads
 
 
 
 ## Congestion control protocol
-The congestion control supports an algorithm which is similar to the Reno tcp protocol. </br>
-In the following picture, we can see the change in window size as packets are received over time. Whenever a packet is lost the window size cuts by half, and the thresh is set to half the window size too. In our implementation we see similarity in these two properties. Additionaly to congestion avoidance and fast recovery, we also implemented slow start algorithm, that initializes the thresh faster than the congestion avoidance algorithm to check where is the limit for maximum packet sending speed.
-![image](https://user-images.githubusercontent.com/82415308/156571449-d71d3f5f-9992-4ae4-b043-ca1b609f1180.png)
-
-
-![image](https://user-images.githubusercontent.com/82415308/156570470-f63fc904-0865-4eed-a4ef-83b7cb81c530.png)
 
 
 # Directories
