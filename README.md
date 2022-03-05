@@ -8,12 +8,6 @@ The main purpose of this project is to experience and build reliable data transf
 our idea is to implement RDT that supports the ARQ system [Selective repeat](https://en.wikipedia.org/wiki/Selective_Repeat_ARQ) but with changing window size that supports the algorithms slow start, congestion avoidance, FAST recovery. </br> 
 
 # How we've done it
-## Class Fields
-The RDTServer.RDT class consists of few fields. Such as:
-| Description\Field | Sequence number | running | window size | timeout | Timer| receivingThread | sendingThread | packets | sendAgain |
-|-|-|-|-|-|-|-|-|-|-|
-| ~ | The current message's sequence number | bool- Is the server running or not | The maximum amount of new packets that could be sent at specific time | The amount of time a thread waits before resending a packet| Thread that resends the packets again | Thread that listens to the client's messages | Thread that sends new messages to the client based on the window size | Dict stores last packets sent | Minimum heap that stores tuple of time to be sent and sequence number, sorted by time to be sent |
-----------------------------------------------------
 ## Packet Construction
 - Each time the server wants to send a message it constructs a packet consists of few fields that help the client digest the data inside the packet.
 - The server fills the sequence field inside the packet with its current sequence number.
@@ -53,7 +47,12 @@ In the following picture, we can see the change in window size as packets are re
 - To provide some security for the packets, we've created a regular 16 bit checksum algorithm.
 The Algorithm process: 
 
-
+## Class Fields
+The RDTServer.RDT class consists of few fields. Such as:
+| Description\Field | Sequence number | running | window size | timeout | Timer| receivingThread | sendingThread | packets | sendAgain |
+|-|-|-|-|-|-|-|-|-|-|
+| ~ | The current message's sequence number | bool- Is the server running or not | The maximum amount of new packets that could be sent at specific time | The amount of time a thread waits before resending a packet| Thread that resends the packets again | Thread that listens to the client's messages | Thread that sends new messages to the client based on the window size | Dict stores last packets sent | Minimum heap that stores tuple of time to be sent and sequence number, sorted by time to be sent |
+----------------------------------------------------
 ## Threads
 
 
