@@ -5,7 +5,7 @@ The main purpose of this project is to experience and build reliable data transf
 
 
 # Our Idea
-our idea is to implement RDT that supports the ARQ system [Selective repeat](https://en.wikipedia.org/wiki/Selective_Repeat_ARQ) but with changing window size that supports the algorithms slow start, congestion avoidance, FAST recovery. </br> 
+Our idea is to create a multi threaded SERVER implementation for this project. Each client receives a thread that listens to the connection that runs on the server side. When a client wants to download a file it creates a new-ported udp socket and the server creates one too, then they verify the ports by the tcp connection. To secure no port duplicates we dedicated 15 unique ports for the client, and 15 unique ports for the server (in practice the server needs more but we don't intend to make more than 7 clients). To manage the ports we creates a file that contains open ports and a port manager wich acts as a garbage collector for ports. The server manages all the information about the clients and listens to new connections and to already existing ones. How we intend to transfer packets with the udp protocol in a reliable and fast way? we've implemented RDT that supports Automatic Repeat Requests system [Selective repeat](https://en.wikipedia.org/wiki/Selective_Repeat_ARQ) but we added a little extension to it, we used dynamic window size.  For more detail, we've implemented The algorithms : slow start, congestion avoidance, FAST recovery. </br> 
 </br>
 
 -------
