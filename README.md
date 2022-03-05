@@ -24,7 +24,7 @@ our idea is to implement RDT that supports the ARQ system [Selective repeat](htt
 4. open another terminal window, and path to the CLIENT directory.
 5. type python3 ClientGUI.py
 - its important to run the app from inside of the directoriess specified above.
-</br> done
+
 # How we've done it
 ## UML
 This uml represents how our system works most basically. </br>
