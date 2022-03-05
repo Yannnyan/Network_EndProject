@@ -1,6 +1,4 @@
 # Network_EndProject
-This is our final project in networking course.
-
 # Preview
 In this project we built a client server model to represent a chat, in which users can communicate and send files.
 The main purpose of this project is to experience and build reliable data transfer protocols with congestion control to send files with.
