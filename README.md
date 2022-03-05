@@ -93,6 +93,13 @@ The RDTServer.RDT class consists of few fields. Such as:
 - The threads are part of the client server communication. 
 - The client opens a listening thread that receives messages from the server and update the gui accordingly.
 - The Server on the other hand has a thread for each client, that listens to the client's messages on it's connection socket. And another thread to accept new connections from the clients.
+## WIRESHARK
+The pictures below represent 10 % packet loss data transfer in ubuntu. This is a proof that our RDT protocol works. </br>
+here we can see the server has the port 55015, sends udp packets to the client. </br>
+This picture shows that acknowledged packets are sent once acknowledged. We can see the server responds as respond to the client's ACK.
+
+![image](https://user-images.githubusercontent.com/82415308/156900191-9a4db573-2539-460a-a653-91cb3bcd206a.png)
+
 ## GUI
 ![image](https://user-images.githubusercontent.com/82415308/156894099-8f4c6a1c-60fb-466a-a5cc-e0a9f90abbb0.png)
 ![image](https://user-images.githubusercontent.com/82415308/156894210-b5843895-ecb3-47e1-b545-e95f18b0d6ef.png)
@@ -100,5 +107,4 @@ The RDTServer.RDT class consists of few fields. Such as:
 ![image](https://user-images.githubusercontent.com/82415308/156894286-c38569b5-3e0b-4c06-bca4-f566c555cacd.png)
 ![image](https://user-images.githubusercontent.com/82415308/156894315-c2f85d83-fc46-4ec9-836f-76ebac44e4cd.png)
 ![image](https://user-images.githubusercontent.com/82415308/156894393-05ee23c3-eb01-4e6c-9634-41cac3b07299.png)
-
 
