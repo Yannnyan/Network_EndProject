@@ -20,7 +20,7 @@ The RDTServer.RDT class consists of few fields. Such as:
 - Each packet is filled with 1024 bytes exactly. This is done to prevent the data from being merged into another received packet at the client side, and vice versa.
 - To transfer data we used a field called Data to store a buffer sized at most 1024 bytes but could be lower depends on the size of the fields.
 - In order to identify the purpose of the packet we used a field named Type, which could consist of the following values: new- new packet, stop- stop sending, req- request ack.
-- The most important is the checksum field to address the white elephant in the room, which is data curroption. We've used 16 bits checksum which has 99.98% chance to detect errors.
+- The most important is the checksum field to address the white elephant in the room, which is data curroption. We've used 16 bits checksum.
 
 Every message should look something like this: 
 ![image](https://user-images.githubusercontent.com/82415308/156677825-793ce11e-ec5a-475c-9f8a-9aa27cf7d490.png)
