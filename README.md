@@ -59,8 +59,15 @@ The congestion control supports an algorithm which is similar to the Reno tcp pr
 In the following picture, we can see the change in window size as packets are received over time. Whenever a packet is lost the window size cuts by half, and the thresh is set to half the window size too. In our implementation we see similarity in these two properties. Additionaly to congestion avoidance and fast recovery, we also implemented slow start algorithm, that initializes the thresh faster than the congestion avoidance algorithm to check where is the limit for maximum packet sending speed.
 ![image](https://user-images.githubusercontent.com/82415308/156570470-f63fc904-0865-4eed-a4ef-83b7cb81c530.png)
 ## Data Integrity
-- To provide some security for the packets, we've created a regular 16 bit checksum algorithm.
+- To provide some security for the packets, we've created a regular 16 bit checksum algorithm. </br>
 The Algorithm process: 
+- The buffer is converted to bits by concatinating 8 bit ascii values of the characters and padding with zeros.
+- The Sender side takes the buffer and divides it into groups of 16 bits
+- Then it adds all of them together, and adds back the carry if there is one.
+- Then send the 16 bit number as checksum.
+- The receiver side takes the buffer and does the same process that specified above, and then adds the checksum that the sender sent.
+- if the result contains a zero then there was data corruption.
+- ** Note that this algorithm only provides some protection while some errors can go undetected **
 ## Packet Construction
 - Each time the server wants to send a message it constructs a packet consists of few fields that help the client digest the data inside the packet.
 - The server fills the sequence field inside the packet with its current sequence number.
