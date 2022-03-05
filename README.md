@@ -8,19 +8,13 @@ The main purpose of this project is to experience and build reliable data transf
 our idea is to implement RDT that supports the ARQ system [Selective repeat](https://en.wikipedia.org/wiki/Selective_Repeat_ARQ) but with changing window size that supports the algorithms slow start, congestion avoidance, FAST recovery. </br> 
 
 # How we've done it
-## Packet Construction
-- Each time the server wants to send a message it constructs a packet consists of few fields that help the client digest the data inside the packet.
-- The server fills the sequence field inside the packet with its current sequence number.
-- Each packet is filled with 1024 bytes exactly. This is done to prevent the data from being merged into another received packet at the client side, and vice versa.
-- To transfer data we used a field called Data to store a buffer sized at most 1024 bytes but could be lower depends on the size of the fields.
-- In order to identify the purpose of the packet we used a field named Type, which could consist of the following values: new- new packet, stop- stop sending, req- request ack.
-- The most important is the checksum field to address the white elephant in the room, which is data curroption. We've used 16 bits checksum.
+## UML
+This uml represents how our system works most basically. </br>
+![image](https://user-images.githubusercontent.com/82415308/156893960-b5e37ccc-b556-42dd-bbfb-92ce2dd5e8de.png)
 
-Every message should look something like this: 
-![image](https://user-images.githubusercontent.com/82415308/156677825-793ce11e-ec5a-475c-9f8a-9aa27cf7d490.png)
 
 ## Download file from Server
-- The Client opens a udp socket with our RDT implemented class, and listens to it. 
+- The Client opens a udp socket and our RDT implemented class, and listens to it. 
 - Then it sends a TCP message to the server asking to download a specific file.
 -  The server responds with one of two ways depends whether the client already asked to download a file or not. It opens a udp socket and saves it or resets parameters. 
 -  The server then sends a SYN with the name of the file to the client's listening socket.
@@ -46,7 +40,16 @@ In the following picture, we can see the change in window size as packets are re
 ## Data Integrity
 - To provide some security for the packets, we've created a regular 16 bit checksum algorithm.
 The Algorithm process: 
+## Packet Construction
+- Each time the server wants to send a message it constructs a packet consists of few fields that help the client digest the data inside the packet.
+- The server fills the sequence field inside the packet with its current sequence number.
+- Each packet is filled with 1024 bytes exactly. This is done to prevent the data from being merged into another received packet at the client side, and vice versa.
+- To transfer data we used a field called Data to store a buffer sized at most 1024 bytes but could be lower depends on the size of the fields.
+- In order to identify the purpose of the packet we used a field named Type, which could consist of the following values: new- new packet, stop- stop sending, req- request ack.
+- The most important is the checksum field to address the white elephant in the room, which is data curroption. We've used 16 bits checksum.
 
+Every message should look something like this: 
+![image](https://user-images.githubusercontent.com/82415308/156677825-793ce11e-ec5a-475c-9f8a-9aa27cf7d490.png)
 ## Class Fields
 The RDTServer.RDT class consists of few fields. Such as:
 | Description\Field | Sequence number | running | window size | timeout | Timer| receivingThread | sendingThread | packets | sendAgain |
@@ -54,6 +57,14 @@ The RDTServer.RDT class consists of few fields. Such as:
 | ~ | The current message's sequence number | bool- Is the server running or not | The maximum amount of new packets that could be sent at specific time | The amount of time a thread waits before resending a packet| Thread that resends the packets again | Thread that listens to the client's messages | Thread that sends new messages to the client based on the window size | Dict stores last packets sent | Minimum heap that stores tuple of time to be sent and sequence number, sorted by time to be sent |
 ----------------------------------------------------
 ## Threads
+## CLIENT SERVER TCP communication
+## GUI
+![image](https://user-images.githubusercontent.com/82415308/156894099-8f4c6a1c-60fb-466a-a5cc-e0a9f90abbb0.png)
+![image](https://user-images.githubusercontent.com/82415308/156894210-b5843895-ecb3-47e1-b545-e95f18b0d6ef.png)
+![image](https://user-images.githubusercontent.com/82415308/156894259-40b75670-4bbc-486e-b2e3-baa80b21cfbd.png)
+![image](https://user-images.githubusercontent.com/82415308/156894286-c38569b5-3e0b-4c06-bca4-f566c555cacd.png)
+![image](https://user-images.githubusercontent.com/82415308/156894315-c2f85d83-fc46-4ec9-836f-76ebac44e4cd.png)
+![image](https://user-images.githubusercontent.com/82415308/156894393-05ee23c3-eb01-4e6c-9634-41cac3b07299.png)
 
 
 
