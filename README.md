@@ -16,6 +16,15 @@ our idea is to implement RDT that supports the ARQ system [Selective repeat](htt
 [GUI](https://github.com/Yannnyan/Network_EndProject/blob/main/CLIENT/ClientGUI.py)
 
 --------
+
+## How to run
+1. download the directory to your pc.
+2. open terminal, and path to the SERVER directory.
+3. type python3 Server.py
+4. open another terminal window, and path to the CLIENT directory.
+5. type python3 ClientGUI.py
+- its important to run the app from inside of the directoriess specified above.
+</br> done
 # How we've done it
 ## UML
 This uml represents how our system works most basically. </br>
