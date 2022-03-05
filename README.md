@@ -77,7 +77,15 @@ The RDTServer.RDT class consists of few fields. Such as:
 |-|-|-|-|-|-|-|-|-|-|
 | ~ | The current message's sequence number | bool- Is the server running or not | The maximum amount of new packets that could be sent at specific time | The amount of time a thread waits before resending a packet| Thread that resends the packets again | Thread that listens to the client's messages | Thread that sends new messages to the client based on the window size | Dict stores last packets sent | Minimum heap that stores tuple of time to be sent and sequence number, sorted by time to be sent |
 ----------------------------------------------------
-## CLIENT SERVER TCP communication
+## CLIENT SERVER TCP communication and packets
+- The Client connects to the server, the server saves it's connection inside a dictionary by the client's address.
+- The Client sends requests in form of tcp packets, where the data contains a command and value, which then the server can analize and respond accordingly.
+- The general data format of a packet is {"command" : "value"}, we use json library to analize the messages.
+- When a client wants to disconnect from the service, it sends a disconnect message {"dc", ""} , then the server removes him from all the data structures he is stored. and closes the socket.
+### Threads
+- The threads are part of the client server communication. 
+- The client opens a listening thread that receives messages from the server and update the gui accordingly.
+- The Server on the other hand has a thread for each client, that listens to the client's messages on it's connection socket. And another thread to accept new connections from the clients.
 ## GUI
 ![image](https://user-images.githubusercontent.com/82415308/156894099-8f4c6a1c-60fb-466a-a5cc-e0a9f90abbb0.png)
 ![image](https://user-images.githubusercontent.com/82415308/156894210-b5843895-ecb3-47e1-b545-e95f18b0d6ef.png)
