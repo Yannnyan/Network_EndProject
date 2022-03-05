@@ -1,5 +1,6 @@
 import json
 import socket
+import threading
 
 import CLIENT.RDTClient
 from Algorithms import portsManager
@@ -74,6 +75,7 @@ class Client_:
 
     # '{"download" : "name_of_file"}'
     def download_file(self, name_of_file):
+        print("[CLIENT] asking to download " + name_of_file)
         self.RDT.addFile(name_of_file)
         self.RDT.startReceiving()
         message = json.dumps({"download": name_of_file})

@@ -5,6 +5,7 @@ startPort = 55000
 serverStartPort = 55015
 filename = "../Algorithms/ports.json"
 
+
 def extractPortServer():
     file = open(filename, 'r')
     d: dict = json.load(file)
@@ -14,6 +15,7 @@ def extractPortServer():
     json.dump(d, f)
     f.close()
     print(d["ports"])
+
 
 def extractPort():
     file = open(filename, 'r')
@@ -25,6 +27,7 @@ def extractPort():
     f.close()
     print(d["ports"])
 
+
 def getPortServer() -> int:
     ports: list = checkAvailablePortsServer()
     if ports is None:
@@ -35,6 +38,7 @@ def getPortServer() -> int:
     print(port)
     extractPortServer()
     return port
+
 
 def getPort() -> int:
     ports: list = checkAvailablePorts()
@@ -87,6 +91,7 @@ def disconnectPort(port):
     json.dump(d, f)
     f.close()
 
+
 def disconnectPortServer(port):
     f = open(filename, 'r')
     d = json.load(f)
@@ -98,4 +103,4 @@ def disconnectPortServer(port):
     json.dump(d, f)
     f.close()
 
-#resetFile()
+# resetFile()

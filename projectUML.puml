@@ -1,0 +1,19 @@
+@startuml
+
+[Server] -r-> [Client] : tcp responses
+[Client] -l-> [Server] : tcp requests
+
+[Server] -d-> (RDTServer) : starts
+
+[Client] -d-> [RDTClient] : starts
+[RDTClient] -l-> [RDTServer] : udp ARQ
+[RDTServer] -r-> [RDTClient] : udp packets
+
+[ClientGUI] -l-> [Client] : requests
+[Client] -r-> [ClientGUI] : updates
+(User) -d-> [ClientGUI] : input
+
+[RDTServer] -u-> [FILES] : reads
+[RDTServer] -d-> [Algorithms] : uses
+[RDTClient] -d-> [Algorithms] : uses
+@enduml

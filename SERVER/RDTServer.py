@@ -17,31 +17,24 @@ class RDT:
         self.sock = serversocket
         self.sequenceNumber = 0
         self.packets = {}  # {seq num: packet}
-        self.sendAgain = Minheap.MinHeap()  # (timeStamp, seq num ) min queue by timestamps for thread to send packets again
+        self.sendAgain = Minheap.MinHeap()  # (timeStamp, seq num ) min queue by timestamps for thread to send
+        # packets again
         self.timeToWait = 2
         self.running = True
         self.sendingNew = True
         self.bytesACK = 0
         self.cc = CongestionControl.CC(BUFFERSIZE)
+        self.lock = threading.Lock()
+        self.File = "../FILES/" + file
+        self.reader = open(self.File, "rb")
+        self.SYN = False
         self.timer = threading.Thread(target=self.resendPackets)
         self.listeningThread = threading.Thread(target=self.receiveARQ)
         self.sendingThread = threading.Thread(target=self.startSending)
-        self.lock = threading.Lock()
-        File = "../FILES/" + file
-        self.reader = open( File , "rb")
-        # try:
-        #
-        #     extensions = file.split('.')
-        #     # get the type of the document
-        #     extension = extensions[len(extensions)-1]
-        #     if extension == 'txt':
-        #
-        #     elif extension == 'jpeg':
-        #         pass
         # # probably the os couldn't find the specified file path
         # except OSError:
         #     raise OSError
-        self.sizeFile = os.stat(File).st_size
+        self.sizeFile = os.stat(self.File).st_size
         # to seek into specific spot in the file, we just need to keep track of
         # the number of received packets, and multiplie that by the size of the buffer.
         # then we can know how much to seek into the file from the start.
@@ -50,11 +43,36 @@ class RDT:
 
     # main function to be called from the server side
     def startServer(self):
+        self.timer = threading.Thread(target=self.resendPackets)
+        self.listeningThread = threading.Thread(target=self.receiveARQ)
+        self.sendingThread = threading.Thread(target=self.startSending)
         self.listeningThread.start()
         self.timer.start()
-        self.sendingThread.start()
+        self.HandShake()
+
+
+    def HandShake(self):
+        print("[SERVER] sending SYN")
+        packet = {"seq": "", "checksum": "", "data": self.File, "type": "SYN", "fill": ""}
+        mes = self.fillPacket(packet)
+        self.sendBuffer(json.dumps(mes))
+
+    def resetServer(self, filename):
+        self.running = True
+        self.sendingNew = True
+        self.packets = {}
+        self.sequenceNumber = 0
+        self.sendAgain = Minheap.MinHeap()
+        # insert three way handshake here
+        self.File = "../FILES/" + filename
+        print("[SERVER] before")
+        self.reader = open(self.File, "rb")
+        print("[SERVER] aft")
+        self.sizeFile = os.stat(self.File).st_size
+        print("[SERVER] after")
 
     def startSending(self):
+        print("[SERVER] starting to send")
         while self.changeIsRunning("get"):
             self.lock.release()
             run = self.changeIsRunning("get")
@@ -116,7 +134,7 @@ class RDT:
             buf = buffer.encode("utf - 8")
             self.sock.sendto(buf, self.addressClient)
             self.lock.release()
-        except OSError as er: # client closed connection
+        except OSError as er:  # client closed connection
             self.lock.release()
             print("[SERVER] OSError client is closed ")
             print(er)
@@ -229,6 +247,7 @@ class RDT:
         elif com == "LOST":
             self.cc.recvMessage("LOST")
         self.lock.release()
+
     # this function makes the access to the heap thread safe
     def changeHeap(self, com, packetSeq=0):
         self.lock.acquire()
@@ -254,7 +273,7 @@ class RDT:
             self.sequenceNumber += 1
         self.lock.release()
 
-    def changeBytes(self, com, bytes = 0):
+    def changeBytes(self, com, bytes=0):
         self.lock.acquire()
         if com == "get":
             return self.bytesACK
@@ -301,6 +320,7 @@ class RDT:
             print("[SERVER] waiting to receive message")
             try:
                 data, addr = self.sock.recvfrom(BUFFERSIZE)
+                print(data)
             except OSError:
                 self.changeIsRunning("stop")
                 return
@@ -316,6 +336,8 @@ class RDT:
             # occurs if the json string is damaged, then send request the ack packet again.
             except ValueError:
                 # can't know what is this message then send it again after timeout automatically
+                print("[SERVER] VAL ER")
+                print(data)
                 continue
 
     # receives json string and reads it into dict
@@ -324,7 +346,8 @@ class RDT:
             dPacket: dict = json.loads(data)
             return dPacket
         except:
-            raise ValueError()
+            print("fuck my life")
+            raise ValueError
 
     def changePackets(self, com, key=0, val=None):
         if val is None:
@@ -346,7 +369,7 @@ class RDT:
         try:
             # value does not exist in dict- might be multiple ACK that are received after a timeout...
             # don't care
-            if packetSeq not in self.changePackets("getkeys"):
+            if packetSeq not in self.changePackets("getkeys") and dPacket["type"] != "SYN-ACK":
                 self.lock.release()
                 return
             self.lock.release()
@@ -359,18 +382,33 @@ class RDT:
                 self.changeHeap("remove", packetSeq)
                 self.lock.release()
                 self.changeCC("ACK")
-            if dPacket["type"] == "stop":
+            elif dPacket["type"] == "stop":
                 self.changeIsRunning("stop")
+            elif dPacket["type"] == "SYN-ACK":
+                # self.reader.seek(dPacket["data"])
+                self.sendingThread.start()
             # the packet with this specific seq num is corrupted
             # send it again.
             else:
+                print("[SERVER] else")
+                print(dPacket)
                 # send seq num packet again automatically.
                 return
                 # if the json is damaged -> the parsed json dict is damaged -> this error occurs
         # only if ARQ packet is corrupted.
         # send the request for the ARQ packet again
         except KeyError:
+            print("[SERVER] keyError")
             self.sendRequestPacket(packetSeq=packetSeq)
+
+    def fillPacket(self, packet: dict) -> dict:
+        lengthPack = self.lengthPacket(packet)
+        fil = ""
+        while lengthPack < BUFFERSIZE:
+            fil = fil + "s"
+            lengthPack += 1
+        packet["fill"] = fil
+        return packet
 
     def sendStopPacket(self):
         print("[SERVER] sending stop packet")
@@ -391,7 +429,7 @@ class RDT:
         packet["filler"] = fil
         seqNum = self.changeSeq("get")
         self.lock.release()
-        self.changePackets("insert",seqNum ,packet)
+        self.changePackets("insert", seqNum, packet)
         seqNum = self.changeSeq("get")
         self.lock.release()
         self.changeHeap("insert", seqNum)

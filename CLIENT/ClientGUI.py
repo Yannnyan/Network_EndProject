@@ -253,7 +253,8 @@ def showFiles():
 
 def selectFile(Event):
     global selectedFile, filesList
-    selectedFile = files[filesList.curselection()[0]]
+    if len(filesList.curselection()) != 0:
+        selectedFile = files[filesList.curselection()[0]]
 
 
 def downloadFile():
@@ -293,7 +294,7 @@ def filesButtonfunc():
 # Client sends a message to the gui with the command and the description to be executed and the gui reacts to display
 # that.
 def getMessageFromClient(message: str):
-    global onlineClients, chatTextMessages, files
+    global onlineClients, chatTextMessages, files, downloading
     print("[CLIENT] got message from server. " + message)
     # '{"command" : "description"}'
     d: dict
@@ -336,6 +337,9 @@ def getMessageFromClient(message: str):
         updateLog("Files available", ', '.join(val))
     if ex == "updateDownload":
         updateLog("Download update", str(int(val)) + " precent completed")
+    if ex == "finishDownload":
+        downloading = False
+        updateLog("Download update", "finished download")
 
 
 def updateChat():

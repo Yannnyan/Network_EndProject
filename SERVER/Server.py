@@ -104,22 +104,33 @@ class Server_():
             self.sendMessageToClient(self.listFiles(), addr)
         elif ex == "download":
             clientUdpPort = self.connectionDict[addr][3]
-            print("creating socket")
-            RDTsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            print(self.connectionDict[addr][4])
-            RDTsock.bind((IP, self.connectionDict[addr][4]))
             clientIP = addr[0]
-            print("creating rdt socket")
-            self.udpsockets[(addr[0], clientUdpPort)] = SERVER.RDTServer.RDT(val, RDTsock,
-                                                                             (clientIP, clientUdpPort))
-            print(self.udpsockets[(addr[0], clientUdpPort)])
-            sock = self.udpsockets[(addr[0], clientUdpPort)]
-            sock.startServer()
-            tellClient = partial(self.clientDownloadUpdate ,addr, sock)
-            self.timer = threading.Thread(target= tellClient)
-            self.timer.start()
+
+            try:
+                rdtSock = self.udpsockets[(clientIP, clientUdpPort)]
+                if rdtSock is None:
+                    raise KeyError
+                if rdtSock.running is False:
+                    rdtSock.resetServer(val)
+                    print("[SERVER] starting download")
+                    rdtSock.startServer()
+                    tellClient = partial(self.clientDownloadUpdate, addr, rdtSock)
+                    self.timer = threading.Thread(target=tellClient)
+                    self.timer.start()
+            except KeyError:  # udp socket has not opened yet
+                RDTsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                RDTsock.bind((IP, self.connectionDict[addr][4]))
+                print("creating rdt socket")
+                self.udpsockets[(addr[0], clientUdpPort)] = SERVER.RDTServer.RDT(val, RDTsock,
+                                                                                 (clientIP, clientUdpPort))
+                sock = self.udpsockets[(addr[0], clientUdpPort)]
+                sock.startServer()
+                tellClient = partial(self.clientDownloadUpdate, addr, sock)
+                self.timer = threading.Thread(target=tellClient)
+                self.timer.start()
         elif ex == "proceed":
-            self.udpsockets[(addr[0], self.connectionDict[addr][3])]
+            # self.udpsockets[(addr[0], self.connectionDict[addr][3])]
+            pass
 
     def clientDownloadUpdate(self, addr, sock):
         run = True
@@ -131,9 +142,13 @@ class Server_():
             if sock.changeIsRunning("get") is False:
                 sock.lock.release()
                 run = False
+                self.finishDownload(addr)
                 continue
             sock.lock.release()
 
+    def finishDownload(self, addr):
+        message = {"finishDownload": ""}
+        self.sendMessageToClient(json.dumps(message), addr)
 
     # returns json format for the online clients connected to the server
     def onlineClients(self):

@@ -15,22 +15,48 @@ class RDT:
         self.sequenceNumber = 0
         self.packets = {}  # {seq num: buffer}
         self.heapSequencePacket = []  # heap contains sequence numbers received
+        self.files = {}  # {file_name : bytesDownloaded}
+        self.currentFile = None
         self.listeningThread = threading.Thread(target=self.receivePackets)
         self.writer = None
         self.lock = threading.Lock()
 
+    def HandShake(self):
+        print("[CLIENT] sending SYN-ACK")
+        try:
+            message = {"seq": -1, "checksum": "", "data": self.files[self.currentFile], "type": "SYN-ACK", "fill": ""}
+            mes = self.fillPacket(message)
+            self.sendBuffer(json.dumps(mes))
+            print("[CLIENT] sent buffer")
+        except KeyError:
+            self.files[self.currentFile] = 0
+            message = {"seq": -1, "checksum": "", "data": 0, "type": "SYN-ACK", "fill": ""}
+            mes = self.fillPacket(message)
+            self.sendBuffer(json.dumps(mes))
+            print("[CLIENT] sent buffer")
+
     def addFile(self, filename):
+        self.currentFile = filename
         self.writer = open(filename, "wb")
 
     def stopClient(self, packetSeq):
-        self.sendStopPacket(packetSeq = packetSeq)
+        self.sendStopPacket(packetSeq=packetSeq)
         self.changeIsRunning("stop")
 
     # main function in this class
     def startReceiving(self):
+        self.reset()
+        self.listeningThread = threading.Thread(target=self.receivePackets)
         self.listeningThread.start()
 
+    def reset(self):
+        self.running = True
+        self.sequenceNumber = 0
+        self.heapSequencePacket = []
+        self.packets = {}
+
     def receivePackets(self):
+        print("[CLIENT] receiving packets")
         while self.changeIsRunning("get"):
             self.lock.release()
             data, addr = self.sock.recvfrom(BUFFERSIZE)
@@ -74,7 +100,7 @@ class RDT:
             self.lock.release()
             self.changeHeap("pop")
             self.lock.release()
-            buffer = self.changePackets("pop",seqNum)
+            buffer = self.changePackets("pop", seqNum)
             self.lock.release()
             if buffer is None:
                 return
@@ -162,7 +188,11 @@ class RDT:
                     self.lock.release()
                 elif dPacket["type"] == "stop":
                     packetSeq = dPacket["seq"]
-                    self.stopClient(packetSeq= packetSeq)
+                    self.stopClient(packetSeq=packetSeq)
+                elif dPacket["type"] == "SYN":
+                    if dPacket["data"] == ("../FILES/" + self.currentFile):
+                        self.HandShake()
+
         except ValueError as v:
 
             print("[CLIENT] value error " + str(v.__cause__))
@@ -200,6 +230,7 @@ class RDT:
     def sendBuffer(self, buffer: str):
         self.lock.acquire()
         self.sock.sendto(buffer.encode("utf - 8"), self.serverAddress)
+        print("[CLIENT] sent buffersss")
         self.lock.release()
 
     def sendACK(self, packetSeq):
