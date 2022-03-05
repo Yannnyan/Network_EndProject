@@ -5,7 +5,7 @@ The main purpose of this project is to experience and build reliable data transf
 
 
 # Our Idea
-Our idea is to create a multi threaded SERVER implementation for this project. Each client receives a thread that listens to the connection that runs on the server side. When a client wants to download a file it creates a new-ported udp socket and the server creates one too, then they verify the ports by the tcp connection. To secure no port duplicates we dedicated 15 unique ports for the client, and 15 unique ports for the server (in practice the server needs more but we don't intend to make more than 7 clients). To manage the ports we creates a file that contains open ports and a port manager wich acts as a garbage collector for ports. The server manages all the information about the clients and listens to new connections and to already existing ones. How we intend to transfer packets with the udp protocol in a reliable and fast way? we've implemented RDT that supports Automatic Repeat Requests system [Selective repeat](https://en.wikipedia.org/wiki/Selective_Repeat_ARQ) but we added a little extension to it, we used dynamic window size.  For more detail, we've implemented The algorithms : slow start, congestion avoidance, FAST recovery. </br> 
+Our idea is to create a multi threaded SERVER implementation for this project. Each client receives a thread that listens to the connection that runs on the server side. When a client wants to download a file it creates a new-ported udp socket and the server creates one too, then they verify the ports with a tcp message. To secure no port duplicates we dedicated 15 unique ports for the client, and 15 unique ports for the server (in practice the server needs more but we don't intend to make more than 7 clients). To manage the ports we creates a file that contains open ports and a port manager wich acts as a garbage collector for ports. The server manages all the information about the clients and listens to new connections and to already existing ones. How we intend to transfer packets with the udp protocol in a reliable and fast way? we've implemented RDT that supports Automatic Repeat Requests system [Selective repeat](https://en.wikipedia.org/wiki/Selective_Repeat_ARQ) but we added a little extension to it, we used dynamic window size.  For more detail, we've implemented The algorithms : slow start, congestion avoidance, FAST recovery. </br> 
 </br>
 
 -------
@@ -47,6 +47,9 @@ This uml represents how our system works most basically. </br>
 - A thread is running in the background and checking if data needs to be retransmitted by checking the length of the dict, if data needs to be retransmitted it goes to the heap and peeks and sends the minimum while the time to send the packets has passed, then increases the key of the resent packet by a set timeout seconds. </br> In the following picture we can see how the selective repeat algorithm operates upon lost packets and how it provides reliabillity. We can see similarities between this algorithm and between our algorithm, when we fix a cwnd size untill all packages are received. This way we can ensure all packages are received, since we keep resending lost packages untill we receive ack about them from the client.
 ![image](https://user-images.githubusercontent.com/82415308/156571449-d71d3f5f-9992-4ae4-b043-ca1b609f1180.png)
 ## Congestion control
+CC UML </br>
+![image](https://user-images.githubusercontent.com/82415308/156896281-c4cc9986-df73-4b42-a74f-88e40f084a3f.png)
+
 - The serverRDT class contains an object of Congestion Control class, which handles the congestion window size by receiving ACKS or LOST messages.
 - our congestion control algorithm does not change the packet size at all.
 - slow start algorithm - start with cwnd of size 2, meaning that we can send only 2 packets. If the number of consecutive sequence ACKS is greater or equal to the cwnd size, then multiply the cwnd by 2.
@@ -56,8 +59,15 @@ The congestion control supports an algorithm which is similar to the Reno tcp pr
 In the following picture, we can see the change in window size as packets are received over time. Whenever a packet is lost the window size cuts by half, and the thresh is set to half the window size too. In our implementation we see similarity in these two properties. Additionaly to congestion avoidance and fast recovery, we also implemented slow start algorithm, that initializes the thresh faster than the congestion avoidance algorithm to check where is the limit for maximum packet sending speed.
 ![image](https://user-images.githubusercontent.com/82415308/156570470-f63fc904-0865-4eed-a4ef-83b7cb81c530.png)
 ## Data Integrity
-- To provide some security for the packets, we've created a regular 16 bit checksum algorithm.
+- To provide some security for the packets, we've created a regular 16 bit checksum algorithm. </br>
 The Algorithm process: 
+- The buffer is converted to bits by concatinating 8 bit ascii values of the characters and padding with zeros.
+- The Sender side takes the buffer and divides it into groups of 16 bits
+- Then it adds all of them together, and adds back the carry if there is one.
+- Then send the 16 bit number as checksum.
+- The receiver side takes the buffer and does the same process that specified above, and then adds the checksum that the sender sent.
+- if the result contains a zero then there was data corruption.
+- ** Note that this algorithm only provides some protection while some errors can go undetected **
 ## Packet Construction
 - Each time the server wants to send a message it constructs a packet consists of few fields that help the client digest the data inside the packet.
 - The server fills the sequence field inside the packet with its current sequence number.
@@ -74,8 +84,15 @@ The RDTServer.RDT class consists of few fields. Such as:
 |-|-|-|-|-|-|-|-|-|-|
 | ~ | The current message's sequence number | bool- Is the server running or not | The maximum amount of new packets that could be sent at specific time | The amount of time a thread waits before resending a packet| Thread that resends the packets again | Thread that listens to the client's messages | Thread that sends new messages to the client based on the window size | Dict stores last packets sent | Minimum heap that stores tuple of time to be sent and sequence number, sorted by time to be sent |
 ----------------------------------------------------
-## Threads
-## CLIENT SERVER TCP communication
+## CLIENT SERVER TCP communication and packets
+- The Client connects to the server, the server saves it's connection inside a dictionary by the client's address.
+- The Client sends requests in form of tcp packets, where the data contains a command and value, which then the server can analize and respond accordingly.
+- The general data format of a packet is {"command" : "value"}, we use json library to analize the messages.
+- When a client wants to disconnect from the service, it sends a disconnect message {"dc", ""} , then the server removes him from all the data structures he is stored. and closes the socket.
+### Threads
+- The threads are part of the client server communication. 
+- The client opens a listening thread that receives messages from the server and update the gui accordingly.
+- The Server on the other hand has a thread for each client, that listens to the client's messages on it's connection socket. And another thread to accept new connections from the clients.
 ## GUI
 ![image](https://user-images.githubusercontent.com/82415308/156894099-8f4c6a1c-60fb-466a-a5cc-e0a9f90abbb0.png)
 ![image](https://user-images.githubusercontent.com/82415308/156894210-b5843895-ecb3-47e1-b545-e95f18b0d6ef.png)
@@ -83,80 +100,5 @@ The RDTServer.RDT class consists of few fields. Such as:
 ![image](https://user-images.githubusercontent.com/82415308/156894286-c38569b5-3e0b-4c06-bca4-f566c555cacd.png)
 ![image](https://user-images.githubusercontent.com/82415308/156894315-c2f85d83-fc46-4ec9-836f-76ebac44e4cd.png)
 ![image](https://user-images.githubusercontent.com/82415308/156894393-05ee23c3-eb01-4e6c-9634-41cac3b07299.png)
-
-
-
-## Congestion control protocol
-
-
-# Directories
-
-1. [SERVER](https://github.com/Yannnyan/Network_EndProject/tree/main/SERVER)
-2. [CLIENT](https://github.com/Yannnyan/Network_EndProject/tree/main/CLIENT)
-3. [FILES](https://github.com/Yannnyan/Network_EndProject/tree/main/FILES)
-4. [TESTS](https://github.com/Yannnyan/Network_EndProject/tree/main/TESTS)
-5. [Algorithms](https://github.com/Yannnyan/Network_EndProject/tree/main/Algorithms)
-
-# Classes
-### SERVER
-1. Server - represents the most 
-
-### CLIENT
-1. Client - represents the basic client class that communicates with the server.
-2. ClientGUI - represent comfortable UI for the user to communicate with the server.
-### FILES
-> description of the files inside FILES directory
-1. txt - text files
-2. png - images
-3. generateFile.py - Generate files of a certain size. 
-4. 
-### TESTS
-1. Server RDT tests
-2. checksum tests
-3. congestion control tests
-
-### Algorithms
-1. Minheap - basic data structure that enables to decrease key with O log n complexity as opposed to pythons default heap that does not support this operation.
-2. checksum - computes the checksum of the buffer given to the checksum and, contains a function that checks whether the checksum received is valid. Allows to verify that the data transfered is valid.
-3. 
-
-
-
-
-
-
-
-
-
-
-
-
-## Summary of the pdf
-> Generally - we need to build a client server communication design in python to send and receive files.
-1) gui := bonus.
-2) design an implementation for (FAST UDP reliable) + congestion control (RDT).
-
-## Links for devs (Delete Later)
-[google docs](https://docs.google.com/document/d/1WFzKAJH9fTqFsBf4oBU_-Y3lwhuzAA75eS2UvtlveAs/edit)
-
-## Project pdf (Delete later)
-
-### Rules
-![image](https://user-images.githubusercontent.com/82415308/151711634-42814d03-4c39-45af-bfb1-3b5b05eb9a5f.png)
-![image](https://user-images.githubusercontent.com/82415308/151711654-75646717-a2bb-47cd-9aee-c95413ab1669.png)
-### The Excersice
-![image](https://user-images.githubusercontent.com/82415308/151711581-1cbe4405-df53-4477-8e00-549c81639ac2.png)
-![image](https://user-images.githubusercontent.com/82415308/151711700-e9b1023b-ebcf-4b46-86db-22070645c2d5.png)
-![image](https://user-images.githubusercontent.com/82415308/151711718-55356b4e-b07a-4c37-a358-9214c5755f60.png)
-![image](https://user-images.githubusercontent.com/82415308/151711737-63d01ae3-74ba-4f98-8b28-d8f18572bc69.png)
-### Description of the system
-![image](https://user-images.githubusercontent.com/82415308/151711758-6232882d-0cce-4ce0-ab12-7185234cffe1.png)
-![image](https://user-images.githubusercontent.com/82415308/151711774-212ebe36-bb3a-4133-a9a0-e934a04af2aa.png)
-![image](https://user-images.githubusercontent.com/82415308/151711787-553631df-f55a-4aaf-a62d-ba2c9c3dc148.png)
-![image](https://user-images.githubusercontent.com/82415308/151711807-4e1c6657-1886-430b-ad23-c314bedb9248.png)
-![image](https://user-images.githubusercontent.com/82415308/151711824-dfdc2fce-d753-4160-89f3-19bffe28080a.png)
-
-
-
 
 
