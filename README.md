@@ -50,12 +50,11 @@ Every message should look something like this:
 
 
 ## Congestion control protocol
-
+The congestion control supports an algorithm which is similar to the Reno tcp protocol. </br>
+In the following picture, we can see the change in window size as packets are received over time. Whenever a packet is lost the window size cuts by half, and the thresh is set to half the window size too. In our implementation we see similarity in these two properties. Additionaly to congestion avoidance and fast recovery, we also implemented slow start algorithm, that initializes the thresh faster than the congestion avoidance algorithm to check where is the limit for maximum packet sending speed.
 ![image](https://user-images.githubusercontent.com/82415308/156571449-d71d3f5f-9992-4ae4-b043-ca1b609f1180.png)
 
-The congestion control supports the algorithm which is similar to the Reno tcp protocol. </br>
 
-In the following picture, we can see the change in window size as packets are received over time. Whenever a packet is lost the window size cuts by half.
 ![image](https://user-images.githubusercontent.com/82415308/156570470-f63fc904-0865-4eed-a4ef-83b7cb81c530.png)
 
 
