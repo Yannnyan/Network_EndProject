@@ -1,0 +1,7 @@
+@startuml
+(slow start) -> (slow start) : increase cwnd size
+(slow start) -l-> (reset cwnd) : LOST
+(reset cwnd) -d-> (congestion avoidance) : FAST recovery
+(congestion avoidance) -u-> (reset cwnd) : LOST
+(congestion avoidance) -d-> (congestion avoidance) : increase cwnd size
+@enduml

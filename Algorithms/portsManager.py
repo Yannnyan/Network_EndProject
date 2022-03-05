@@ -103,4 +103,4 @@ def disconnectPortServer(port):
     json.dump(d, f)
     f.close()
 
-# resetFile()
+#resetFile()
