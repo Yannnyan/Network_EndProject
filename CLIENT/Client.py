@@ -27,12 +27,12 @@ class Client_:
         global PORT, PORTSERVER
         PORT = portsManager.getPort()
         self.sock_ = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock_.bind((self.SERVERIP, PORT))
+        self.sock_.bind((socket.gethostbyname(socket.gethostname()), PORT))
         addr = (self.SERVERIP, PORTSERVER)
         self.sock_.connect(addr)
         self.portRDT = portsManager.getPort()
         self.RDTSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.RDTSock.bind((self.SERVERIP,self.portRDT))
+        self.RDTSock.bind((socket.gethostbyname(socket.gethostname()),self.portRDT))
 
         message = json.dumps({"connect": [self.name, self.portRDT]})
         self.sock_.sendall(message.encode(FORMAT))
