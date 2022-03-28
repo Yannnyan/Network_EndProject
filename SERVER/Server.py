@@ -12,7 +12,7 @@ from Algorithms import portsManager
 import SERVER.RDTServer
 
 PORT = 49153
-IP = "127.0.0.1"
+IP = socket.gethostbyname(socket.gethostname())
 FORMAT = "utf - 8"
 BUFFERSIZE = 1024
 
